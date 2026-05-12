@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # =========================================
+  # MongoDB - Primary Database
+  # =========================================
+  mongodb:
+    image: mongo:7.0
+    container_name: phuonganh-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-phuonganh_secure_password_2024}
+      MONGO_INITDB_DATABASE: phuonganh_tts
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - phuonganh-network
+    mem_limit: 2g
+
+  # =========================================
+  # Redis - Cache & Rate Limiting
+  # =========================================
+  redis:
+    image: redis:7-alpine
+    container_name: phuonganh-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - phuonganh-network
+    mem_limit: 256m
+
+  # =========================================
+  # MongoDB Express - Web Admin Interface
+  # =========================================
+  mongo-express:
+    image: mongo-express:latest
+    container_name: phuonganh-mongo-express
+    restart: unless-stopped
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USER:-admin}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD:-phuonganh_secure_password_2024}
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-phuonganh_admin_2024}
+    ports:
+      - "${MONGO_EXPRESS_PORT:-8081}:8081"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - phuonganh-network
+    mem_limit: 128m
+
+# =========================================
+# Volumes
+# =========================================
+volumes:
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# =========================================
+# Networks
+# =========================================
+networks:
+  phuonganh-network:
+    driver: bridge

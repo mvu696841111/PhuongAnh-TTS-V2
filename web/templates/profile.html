@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hồ sơ - Phương Anh TTS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .profile-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 100px 24px 60px;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 40px;
+            padding: 32px;
+            background: var(--bg-white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 40px;
+            font-weight: 700;
+        }
+
+        .profile-info h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .profile-info p {
+            color: var(--text-gray);
+            font-size: 16px;
+        }
+
+        .profile-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(255, 107, 53, 0.1);
+            color: var(--primary);
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .profile-badge.admin {
+            background: rgba(239, 68, 68, 0.1);
+            color: #EF4444;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .profile-card {
+            background: var(--bg-white);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .profile-card h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-row .label {
+            color: var(--text-gray);
+            font-size: 14px;
+        }
+
+        .info-row .value {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .info-row .value.highlight {
+            color: var(--primary);
+        }
+
+        /* Usage Progress */
+        .usage-section {
+            margin-top: 20px;
+        }
+
+        .usage-item {
+            margin-bottom: 20px;
+        }
+
+        .usage-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .usage-header span {
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+
+        .usage-header strong {
+            color: var(--text-dark);
+        }
+
+        .usage-bar {
+            height: 8px;
+            background: var(--bg-gray);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .usage-bar .fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .usage-bar .fill.warning {
+            background: #F59E0B;
+        }
+
+        .usage-bar .fill.danger {
+            background: #EF4444;
+        }
+
+        /* Subscription Card */
+        .subscription-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-radius: var(--radius);
+            padding: 32px;
+            grid-column: span 2;
+        }
+
+        .subscription-card h3 {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .subscription-card .plan-name {
+            font-size: 36px;
+            font-weight: 800;
+            margin: 16px 0;
+        }
+
+        .subscription-card .plan-price {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 24px;
+        }
+
+        .subscription-card .plan-features {
+            list-style: none;
+            margin-bottom: 24px;
+        }
+
+        .subscription-card .plan-features li {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subscription-card .plan-features li::before {
+            content: "✓";
+            color: white;
+            font-weight: bold;
+        }
+
+        .subscription-card .btn-upgrade {
+            background: white;
+            color: var(--primary);
+            padding: 14px 32px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .subscription-card .btn-upgrade:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Edit Form */
+        .edit-form {
+            margin-top: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Action Buttons */
+        .profile-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn-save {
+            background: var(--primary);
+            color: white;
+            padding: 12px 24px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-save:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-cancel {
+            background: transparent;
+            color: var(--text-gray);
+            padding: 12px 24px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-cancel:hover {
+            border-color: var(--text-gray);
+        }
+
+        /* Not logged in */
+        .not-logged-in {
+            text-align: center;
+            padding: 100px 24px;
+        }
+
+        .not-logged-in h1 {
+            font-size: 32px;
+            margin-bottom: 16px;
+        }
+
+        .not-logged-in p {
+            color: var(--text-gray);
+            margin-bottom: 32px;
+        }
+
+        @media (max-width: 768px) {
+            .profile-grid {
+                grid-template-columns: 1fr;
+            }
+            .subscription-card {
+                grid-column: span 1;
+            }
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">
+                <div class="logo">P</div>
+                <div class="brand-name">Phương <span>Anh</span> TTS</div>
+            </a>
+            
+            <div class="navbar-menu">
+                <a href="/">Trang chủ</a>
+                <a href="/about">Giới thiệu</a>
+                <a href="/tts">TTS</a>
+                <a href="/pricing">Bảng giá</a>
+            </div>
+            
+            <div class="navbar-actions" id="navbar-actions">
+                <a href="/login" class="btn btn-outline">Đăng nhập</a>
+                <a href="/register" class="btn btn-primary">Đăng ký</a>
+            </div>
+            
+            <div class="menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu">
+        <a href="/">Trang chủ</a>
+        <a href="/about">Giới thiệu</a>
+        <a href="/tts">TTS</a>
+        <a href="/pricing">Bảng giá</a>
+        <a href="/login" class="btn btn-outline">Đăng nhập</a>
+        <a href="/register" class="btn btn-primary">Đăng ký</a>
+    </div>
+
+    <!-- Profile Content -->
+    <div class="profile-container" id="profile-content" style="display: none;">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-avatar" id="avatar-initial">?</div>
+            <div class="profile-info">
+                <h1>
+                    <span id="profile-name">-</span>
+                    <span class="profile-badge" id="profile-badge">USER</span>
+                </h1>
+                <p id="profile-email">-</p>
+            </div>
+        </div>
+
+        <!-- Profile Grid -->
+        <div class="profile-grid">
+            <!-- Current Subscription -->
+            <div class="subscription-card">
+                <h3> Gói dịch vụ hiện tại</h3>
+                <div class="plan-name" id="current-plan">Free</div>
+                <div class="plan-price" id="plan-price">Miễn phí mãi mãi</div>
+                <ul class="plan-features" id="plan-features">
+                    <li>10 audio/ngày</li>
+                    <li>10,000 ký tự/tháng</li>
+                    <li>6 giọng đọc có sẵn</li>
+                </ul>
+                <button class="btn-upgrade" onclick="location.href='/pricing'">
+                    Nâng cấp gói khác →
+                </button>
+            </div>
+
+            <!-- Account Info -->
+            <div class="profile-card">
+                <h3>👤 Thông tin tài khoản</h3>
+                <div class="info-row">
+                    <span class="label">Email</span>
+                    <span class="value" id="info-email">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Tên đăng nhập</span>
+                    <span class="value" id="info-username">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Số điện thoại</span>
+                    <span class="value" id="info-phone">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Ngày đăng ký</span>
+                    <span class="value" id="info-created">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Đăng nhập cuối</span>
+                    <span class="value" id="info-last-login">-</span>
+                </div>
+            </div>
+
+            <!-- Usage Stats -->
+            <div class="profile-card">
+                <h3>📊 Sử dụng tháng này</h3>
+                <div class="usage-section">
+                    <div class="usage-item">
+                        <div class="usage-header">
+                            <span>Audio hôm nay</span>
+                            <strong><span id="audio-today">0</span> / <span id="audio-today-limit">10</span></strong>
+                        </div>
+                        <div class="usage-bar">
+                            <div class="fill" id="audio-today-bar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div class="usage-item">
+                        <div class="usage-header">
+                            <span>Ký tự tháng này</span>
+                            <strong><span id="chars-month">0</span> / <span id="chars-month-limit">10,000</span></strong>
+                        </div>
+                        <div class="usage-bar">
+                            <div class="fill" id="chars-month-bar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div class="usage-item">
+                        <div class="usage-header">
+                            <span>Tổng audio đã tạo</span>
+                            <strong id="total-audio">0</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Profile -->
+            <div class="profile-card">
+                <h3>✏️ Chỉnh sửa hồ sơ</h3>
+                <form class="edit-form" id="edit-form">
+                    <div class="form-group">
+                        <label>Tên đăng nhập</label>
+                        <input type="text" id="edit-username" placeholder="Nhập tên của bạn">
+                    </div>
+                    <div class="form-group">
+                        <label>Số điện thoại</label>
+                        <input type="tel" id="edit-phone" placeholder="Nhập số điện thoại">
+                    </div>
+                    <div class="profile-actions">
+                        <button type="submit" class="btn-save">Lưu thay đổi</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Admin Link -->
+            <div class="profile-card" id="admin-card" style="display: none;">
+                <h3>🔐 Quản trị</h3>
+                <p style="color: var(--text-gray); margin-bottom: 16px;">
+                    Truy cập trang quản trị để quản lý người dùng và hệ thống.
+                </p>
+                <a href="/admin" class="btn-save" style="display: inline-block; text-decoration: none;">
+                    Mở trang Admin →
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Not Logged In -->
+    <div class="profile-container not-logged-in" id="not-logged-in">
+        <h1>Bạn chưa đăng nhập</h1>
+        <p>Vui lòng đăng nhập để xem hồ sơ của bạn</p>
+        <a href="/login" class="btn btn-primary btn-lg">Đăng nhập ngay</a>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+
+        // Plan details
+        const PLANS = {
+            free: { name: 'Free', price: 'Miễn phí', daily_audio: 10, monthly_chars: 10000, features: ['10 audio/ngày', '10,000 ký tự/tháng', '6 giọng đọc có sẵn'] },
+            basic: { name: 'Basic', price: '199,000đ/tháng', daily_audio: 100, monthly_chars: 100000, features: ['100 audio/ngày', '100,000 ký tự/tháng', 'Tất cả giọng đọc', 'API Access'] },
+            pro: { name: 'Pro', price: '499,000đ/tháng', daily_audio: 999999, monthly_chars: 500000, features: ['Audio không giới hạn', '500,000 ký tự/tháng', 'Tất cả giọng đọc', 'API Access', 'Hỗ trợ ưu tiên'] },
+            enterprise: { name: 'Enterprise', price: 'Liên hệ báo giá', daily_audio: 999999, monthly_chars: 999999999, features: ['Không giới hạn', 'Tất cả tính năng', 'API không giới hạn', 'Hỗ trợ 24/7', 'Custom Voice Cloning'] }
+        };
+
+        // Check auth and load profile
+        async function loadProfile() {
+            const user = PhuongAnhTTS.getCurrentUser();
+            const token = PhuongAnhTTS.getAuthToken();
+
+            if (!user || !token) {
+                document.getElementById('not-logged-in').style.display = 'block';
+                document.getElementById('profile-content').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('not-logged-in').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'block';
+
+            // Update navbar
+            const navbarActions = document.getElementById('navbar-actions');
+            navbarActions.innerHTML = `
+                <span style="font-size: 14px; color: var(--text-gray);">Xin chào, ${user.username || user.email}</span>
+                <a href="/profile" class="btn btn-outline" style="border-color: var(--primary); color: var(--primary);">Hồ sơ</a>
+                <button class="btn btn-outline" onclick="PhuongAnhTTS.logout()">Đăng xuất</button>
+            `;
+
+            // Fill basic info
+            const initial = (user.email || 'U')[0].toUpperCase();
+            document.getElementById('avatar-initial').textContent = initial;
+            document.getElementById('profile-name').textContent = user.username || user.email.split('@')[0];
+            document.getElementById('profile-email').textContent = user.email;
+
+            // Role badge
+            const badge = document.getElementById('profile-badge');
+            if (user.role === 'admin') {
+                badge.textContent = 'ADMIN';
+                badge.classList.add('admin');
+                document.getElementById('admin-card').style.display = 'block';
+            } else {
+                badge.textContent = 'USER';
+            }
+
+            // Plan info
+            const plan = PLANS[user.subscription_plan] || PLANS.free;
+            document.getElementById('current-plan').textContent = plan.name;
+            document.getElementById('plan-price').textContent = plan.price;
+            
+            const featuresList = document.getElementById('plan-features');
+            featuresList.innerHTML = plan.features.map(f => `<li>${f}</li>`).join('');
+
+            // Account info
+            document.getElementById('info-email').textContent = user.email;
+            document.getElementById('info-username').textContent = user.username || 'Chưa cập nhật';
+            document.getElementById('info-phone').textContent = user.phone || 'Chưa cập nhật';
+
+            // Fetch full profile from API
+            try {
+                const profile = await fetch(`${API_BASE}/user/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).then(r => r.json());
+
+                if (profile.created_at) {
+                    document.getElementById('info-created').textContent = new Date(profile.created_at).toLocaleDateString('vi-VN');
+                }
+                if (profile.last_login) {
+                    document.getElementById('info-last-login').textContent = new Date(profile.last_login).toLocaleString('vi-VN');
+                }
+
+                // Usage stats
+                document.getElementById('audio-today').textContent = profile.daily_audio_used || 0;
+                document.getElementById('audio-today-limit').textContent = plan.daily_audio;
+                document.getElementById('audio-today-bar').style.width = `${Math.min((profile.daily_audio_used / plan.daily_audio) * 100, 100)}%`;
+
+                document.getElementById('chars-month').textContent = (profile.monthly_characters || 0).toLocaleString();
+                document.getElementById('chars-month-limit').textContent = plan.monthly_chars.toLocaleString();
+                const charsPercent = Math.min((profile.monthly_characters / plan.monthly_chars) * 100, 100);
+                document.getElementById('chars-month-bar').style.width = `${charsPercent}%`;
+                if (charsPercent > 90) {
+                    document.getElementById('chars-month-bar').classList.add('danger');
+                } else if (charsPercent > 70) {
+                    document.getElementById('chars-month-bar').classList.add('warning');
+                }
+
+                document.getElementById('total-audio').textContent = profile.total_audio_files || 0;
+
+                // Fill edit form
+                document.getElementById('edit-username').value = profile.username || '';
+                document.getElementById('edit-phone').value = profile.phone || '';
+
+            } catch (e) {
+                console.error('Error loading profile:', e);
+                // Use local data
+                document.getElementById('info-created').textContent = new Date().toLocaleDateString('vi-VN');
+                document.getElementById('info-last-login').textContent = 'Chưa có';
+                document.getElementById('edit-username').value = user.username || '';
+            }
+        }
+
+        // Edit form submit
+        document.getElementById('edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const token = PhuongAnhTTS.getAuthToken();
+            if (!token) return;
+
+            const username = document.getElementById('edit-username').value;
+            const phone = document.getElementById('edit-phone').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/user/profile`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, phone })
+                });
+
+                if (res.ok) {
+                    alert('Đã lưu thay đổi!');
+                    location.reload();
+                } else {
+                    alert('Lỗi khi lưu. Vui lòng thử lại.');
+                }
+            } catch (e) {
+                alert('Lỗi kết nối. Vui lòng thử lại.');
+            }
+        });
+
+        // Init
+        document.addEventListener('DOMContentLoaded', loadProfile);
+    </script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.uv]
+index-strategy = "unsafe-best-match"
+override-dependencies = [
+    "nvidia-nccl-cu12; sys_platform == 'linux'",
+]
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+
+[[tool.uv.index]]
+name = "llama-cpp-metal"
+url = "https://abetlen.github.io/llama-cpp-python/whl/metal/"
+explicit = true
+
+
+[project]
+name = "phuonganh-tts"
+version = "2.7.0"
+description = "Vietnamese Text-to-Speech with instant voice cloning and bilingual support"
+readme = "README.md"
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Operating System :: OS Independent",
+]
+keywords = [
+    "text-to-speech",
+    "tts",
+    "vietnamese",
+    "voice-cloning",
+    "speech-synthesis",
+    "real-time",
+    "on-device",
+    "phuonganh",
+]
+authors = [
+    { name = "PhuongAnh-TTS Contributors" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "sea-g2p>=0.7.5",
+    "onnxruntime>=1.20.0",
+    "llama-cpp-python==0.3.16; sys_platform == 'linux'",
+    "requests",
+    "numpy",
+    "soundfile",
+    "PyYAML",
+    "gradio>=5.49.1",
+    "flask>=3.0.0",
+    "flask-cors>=4.0.0",
+    "perth>=0.2.0",
+    "librosa>=0.11.0",
+    "tqdm",
+    # Backend dependencies
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "python-multipart>=0.0.9",
+    "starlette>=0.36.0",
+    "motor>=3.3.0",
+    "pymongo>=4.6.0",
+    "beanie>=1.25.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "bcrypt>=4.0.0,<4.1.0",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.1.0",
+    "email-validator>=2.1.0",
+    "redis>=5.0.0",
+    "httpx>=0.26.0",
+    "aiohttp>=3.9.0",
+    "python-magic>=0.4.27",
+    "aiofiles>=23.2.0",
+    "slowapi>=0.1.9",
+    "python-dotenv>=1.0.0",
+    "orjson>=3.9.0",
+    "loguru>=0.7.0",
+    "transformers>=4.36.0",
+    "huggingface-hub>=0.36.0",
+]
+
+[project.optional-dependencies]
+gpu = [
+    "torch",
+    "torchaudio",
+    "neucodec>=0.0.4",
+    "lmdeploy; sys_platform != 'darwin'",
+    "triton-windows; sys_platform == 'win32'",
+    "triton; sys_platform == 'linux'",
+    "transformers; sys_platform == 'darwin'",
+    "accelerate; sys_platform == 'darwin'",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/phuonganh/phuonganh-tts"
+"Repository" = "https://github.com/phuonganh/phuonganh-tts"
+"Bug Tracker" = "https://github.com/phuonganh/phuonganh-tts/issues"
+"Documentation" = "https://github.com/phuonganh/phuonganh-tts/blob/main/README.md"
+"Source Code" = "https://github.com/phuonganh/phuonganh-tts"
+"Changelog" = "https://github.com/phuonganh/phuonganh-tts/releases"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+]
+gpu = [
+    "neucodec>=0.0.4",
+    "torch==2.8.0",
+    "torchaudio==2.8.0",
+    "datasets>=3.2.0",
+    "perth>=0.2.0",
+    "lmdeploy; sys_platform != 'darwin'",
+    "triton-windows; sys_platform == 'win32'",
+    "triton; sys_platform == 'linux'",
+    "transformers; sys_platform == 'darwin'",
+    "accelerate; sys_platform == 'darwin'",
+    "trafilatura>=2.0.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[project.scripts]
+phuonganh-web = "phuonganh_app.gradio_main:main"
+phuonganh-stream = "apps.web_stream:main"
+phuonganh-frontend = "web.web_server:main"
+
+[tool.setuptools]
+package-dir = {"" = "src", "apps" = "apps", "examples" = "examples", "web" = "web"}
+
+[tool.setuptools.packages.find]
+where = ["src", "."]
+include = [
+    "phuonganh_tts",
+    "phuonganh_utils",
+    "phuonganh_app",
+    "apps",
+    "examples",
+    "web",
+]
+
+[tool.setuptools.package-data]
+phuonganh_tts = ["assets/samples/*"]
+
+[tool.uv.sources]
+
+torch = [
+    { index = "pytorch", marker = "sys_platform != 'darwin'" },
+    { index = "pypi", marker = "sys_platform == 'darwin'" }
+]
+
+torchaudio = [
+    { index = "pytorch", marker = "sys_platform != 'darwin'" },
+    { index = "pypi", marker = "sys_platform == 'darwin'" }
+]
+
+lmdeploy = [
+    { url = "https://github.com/InternLM/lmdeploy/releases/download/v0.11.0/lmdeploy-0.11.0+cu128-cp312-cp312-win_amd64.whl", marker = "sys_platform == 'win32' and python_version == '3.12'" },
+    { url = "https://github.com/InternLM/lmdeploy/releases/download/v0.11.0/lmdeploy-0.11.0+cu128-cp312-cp312-manylinux2014_x86_64.whl", marker = "sys_platform == 'linux' and python_version == '3.12'" },
+    { index = "pypi", marker = "sys_platform == 'darwin'" }
+]
+
+llama-cpp-python = [
+    { index = "pypi", marker = "sys_platform != 'win32' and sys_platform != 'darwin'" }
+]

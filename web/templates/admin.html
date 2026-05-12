@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Phương Anh TTS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* Admin Layout */
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+            background: var(--bg-gray);
+        }
+
+        /* Sidebar */
+        .admin-sidebar {
+            width: 260px;
+            background: var(--secondary);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sidebar-header h2 span {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .sidebar-nav {
+            padding: 16px 0;
+        }
+
+        .nav-section {
+            padding: 8px 24px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 24px;
+            color: rgba(255,255,255,0.7);
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .admin-main {
+            flex: 1;
+            margin-left: 260px;
+            padding: 24px;
+        }
+
+        /* Top Bar */
+        .admin-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+        }
+
+        .admin-topbar h1 {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .topbar-actions {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        /* Stats Cards */
+        .admin-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--bg-white);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .stat-card-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-gray);
+        }
+
+        .stat-card-header .icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-card .value {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .stat-card .change {
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+
+        .stat-card .change.positive {
+            color: #10B981;
+        }
+
+        /* Tables */
+        .admin-table-container {
+            background: var(--bg-white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .table-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table-toolbar h3 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: var(--bg-gray);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+
+        .search-box input {
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 14px;
+            width: 200px;
+        }
+
+        .filter-select {
+            padding: 10px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            background: var(--bg-white);
+            cursor: pointer;
+        }
+
+        /* Admin Table */
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .admin-table th {
+            padding: 14px 24px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: var(--bg-gray);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .admin-table td {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .admin-table tbody tr:hover {
+            background: var(--bg-gray);
+        }
+
+        /* User Avatar */
+        .user-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .user-email {
+            font-size: 13px;
+            color: var(--text-gray);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10B981;
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: #F59E0B;
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: #EF4444;
+        }
+
+        .badge-info {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3B82F6;
+        }
+
+        /* Action Buttons */
+        .action-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-action {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .btn-action.edit {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3B82F6;
+        }
+
+        .btn-action.edit:hover {
+            background: #3B82F6;
+            color: white;
+        }
+
+        .btn-action.delete {
+            background: rgba(239, 68, 68, 0.1);
+            color: #EF4444;
+        }
+
+        .btn-action.delete:hover {
+            background: #EF4444;
+            color: white;
+        }
+
+        .btn-action.view {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10B981;
+        }
+
+        .btn-action.view:hover {
+            background: #10B981;
+            color: white;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+
+        .pagination-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .pagination-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            background: var(--bg-white);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .pagination-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .pagination-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* Tabs */
+        .admin-tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 24px;
+        }
+
+        .admin-tab {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-gray);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: var(--transition);
+        }
+
+        .admin-tab:hover {
+            color: var(--primary);
+        }
+
+        .admin-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* Charts Section */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .chart-card {
+            background: var(--bg-white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+        }
+
+        .chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .chart-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .chart-placeholder {
+            height: 250px;
+            background: var(--bg-gray);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-gray);
+        }
+
+        /* Revenue List */
+        .revenue-list {
+            list-style: none;
+        }
+
+        .revenue-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .revenue-item:last-child {
+            border-bottom: none;
+        }
+
+        .revenue-plan {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .revenue-plan .icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .revenue-plan .icon.free {
+            background: rgba(107, 114, 128, 0.1);
+            color: #6B7280;
+        }
+
+        .revenue-plan .icon.basic {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3B82F6;
+        }
+
+        .revenue-plan .icon.pro {
+            background: rgba(139, 92, 246, 0.1);
+            color: #8B5CF6;
+        }
+
+        .revenue-plan .icon.enterprise {
+            background: rgba(255, 107, 53, 0.1);
+            color: var(--primary);
+        }
+
+        .revenue-plan h4 {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .revenue-plan span {
+            font-size: 13px;
+            color: var(--text-gray);
+        }
+
+        .revenue-amount {
+            text-align: right;
+        }
+
+        .revenue-amount .amount {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .revenue-amount .count {
+            font-size: 13px;
+            color: var(--text-gray);
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .admin-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                transform: translateX(-100%);
+            }
+            .admin-main {
+                margin-left: 0;
+            }
+            .admin-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <h2><span>P</span> PhuongAnh Admin</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">Tổng quan</div>
+                <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+                    <i>📊</i> Dashboard
+                </a>
+                
+                <div class="nav-section">Quản lý</div>
+                <a href="#users" class="nav-item" data-tab="users">
+                    <i>👥</i> Người dùng
+                </a>
+                <a href="#subscriptions" class="nav-item" data-tab="subscriptions">
+                    <i>📋</i> Đăng ký
+                </a>
+                <a href="#payments" class="nav-item" data-tab="payments">
+                    <i>💳</i> Thanh toán
+                </a>
+                <a href="#finance" class="nav-item" data-tab="finance">
+                    <i>💰</i> Tài chính
+                </a>
+                <a href="#logs" class="nav-item" data-tab="logs">
+                    <i>📝</i> Nhật ký
+                </a>
+            </nav>
+            <div style="padding: 24px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto;">
+                <a href="/" class="nav-item">
+                    <i>←</i> Quay lại Website
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Top Bar -->
+            <div class="admin-topbar">
+                <h1 id="page-title">Dashboard</h1>
+                <div class="topbar-actions">
+                    <span style="color: var(--text-gray);">Chào, Admin</span>
+                    <button class="btn btn-primary" onclick="location.reload()">Refresh</button>
+                </div>
+            </div>
+
+            <!-- Dashboard Tab -->
+            <div id="dashboard" class="tab-panel active">
+                <div class="admin-stats" id="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <h3>Tổng người dùng</h3>
+                            <div class="icon" style="background: rgba(255,107,53,0.1); color: var(--primary);">👥</div>
+                        </div>
+                        <div class="value" id="stat-total-users">-</div>
+                        <div class="change positive" id="stat-new-users">+0 người tháng này</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <h3>Người dùng trả phí</h3>
+                            <div class="icon" style="background: rgba(16,185,129,0.1); color: #10B981;">💎</div>
+                        </div>
+                        <div class="value" id="stat-paid-users">-</div>
+                        <div class="change" id="stat-paid-percent">0% tổng người dùng</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <h3>Phiên hoạt động</h3>
+                            <div class="icon" style="background: rgba(59,130,246,0.1); color: #3B82F6;">🔐</div>
+                        </div>
+                        <div class="value" id="stat-active-sessions">-</div>
+                        <div class="change">Đang hoạt động</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <h3>Lượt sử dụng tháng</h3>
+                            <div class="icon" style="background: rgba(139,92,246,0.1); color: #8B5CF6;">🎯</div>
+                        </div>
+                        <div class="value" id="stat-usage-month">-</div>
+                        <div class="change">API calls</div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Người dùng mới (30 ngày)</h3>
+                        </div>
+                        <div class="chart-placeholder" id="user-chart">
+                            <span>Đang tải biểu đồ...</span>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Doanh thu theo gói</h3>
+                        </div>
+                        <ul class="revenue-list" id="revenue-list">
+                            <li class="revenue-item">
+                                <div class="revenue-plan">
+                                    <div class="icon free">F</div>
+                                    <div>
+                                        <h4>Free</h4>
+                                        <span>Miễn phí</span>
+                                    </div>
+                                </div>
+                                <div class="revenue-amount">
+                                    <div class="amount">$0</div>
+                                    <div class="count" id="free-count">0 người</div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="users" class="tab-panel">
+                <div class="admin-table-container">
+                    <div class="table-toolbar">
+                        <h3>Danh sách người dùng</h3>
+                        <div class="table-actions">
+                            <div class="search-box">
+                                <span>🔍</span>
+                                <input type="text" placeholder="Tìm kiếm..." id="user-search">
+                            </div>
+                            <select class="filter-select" id="user-plan-filter">
+                                <option value="">Tất cả gói</option>
+                                <option value="free">Free</option>
+                                <option value="basic">Basic</option>
+                                <option value="pro">Pro</option>
+                                <option value="enterprise">Enterprise</option>
+                            </select>
+                            <select class="filter-select" id="user-verified-filter">
+                                <option value="">Tất cả</option>
+                                <option value="true">Đã xác thực</option>
+                                <option value="false">Chưa xác thực</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Người dùng</th>
+                                <th>Số điện thoại</th>
+                                <th>Gói</th>
+                                <th>Trạng thái</th>
+                                <th>Ngày đăng ký</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-gray);">
+                                    Đang tải...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="pagination">
+                        <div class="pagination-info" id="users-pagination-info">
+                            Hiển thị 0 - 0 của 0
+                        </div>
+                        <div class="pagination-btns" id="users-pagination-btns">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subscriptions Tab -->
+            <div id="subscriptions" class="tab-panel">
+                <div class="admin-table-container">
+                    <div class="table-toolbar">
+                        <h3>Danh sách đăng ký</h3>
+                        <div class="table-actions">
+                            <select class="filter-select" id="sub-plan-filter">
+                                <option value="">Tất cả gói</option>
+                                <option value="free">Free</option>
+                                <option value="basic">Basic</option>
+                                <option value="pro">Pro</option>
+                                <option value="enterprise">Enterprise</option>
+                            </select>
+                            <select class="filter-select" id="sub-status-filter">
+                                <option value="">Tất cả trạng thái</option>
+                                <option value="pending">Chờ duyệt</option>
+                                <option value="active">Hoạt động</option>
+                                <option value="expired">Hết hạn</option>
+                                <option value="rejected">Từ chối</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Gói</th>
+                                <th>Trạng thái</th>
+                                <th>Bắt đầu</th>
+                                <th>Hết hạn</th>
+                                <th>Tự động gia hạn</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subscriptions-table-body">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-gray);">
+                                    Đang tải...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="pagination">
+                        <div class="pagination-info" id="subscriptions-pagination-info">
+                            Hiển thị 0 - 0 của 0
+                        </div>
+                        <div class="pagination-btns" id="subscriptions-pagination-btns">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payments Tab -->
+            <div id="payments" class="tab-panel">
+                <div class="admin-table-container">
+                    <div class="table-toolbar">
+                        <h3>Quản lý thanh toán</h3>
+                        <div class="table-actions">
+                            <select class="filter-select" id="payment-status-filter">
+                                <option value="">Tất cả trạng thái</option>
+                                <option value="pending">Chờ xử lý</option>
+                                <option value="completed">Hoàn thành</option>
+                                <option value="approved">Đã duyệt</option>
+                                <option value="rejected">Từ chối</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Email</th>
+                                <th>Gói</th>
+                                <th>Số tiền</th>
+                                <th>Phương thức</th>
+                                <th>Trạng thái</th>
+                                <th>Ngày tạo</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payments-table-body">
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-gray);">
+                                    Đang tải...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="pagination">
+                        <div class="pagination-info" id="payments-pagination-info">
+                            Hiển thị 0 - 0 của 0
+                        </div>
+                        <div class="pagination-btns" id="payments-pagination-btns">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Finance Tab -->
+            <div id="finance" class="tab-panel">
+                <div class="admin-stats">
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <h3>Tổng doanh thu</h3>
+                            <div class="icon" style="background: rgba(16,185,129,0.1); color: #10B981;">💰</div>
+                        </div>
+                        <div class="value" id="finance-total-revenue">$0</div>
+                        <div class="change">Ước tính tháng này</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <h3>Đăng ký hoạt động</h3>
+                            <div class="icon" style="background: rgba(59,130,246,0.1); color: #3B82F6;">📋</div>
+                        </div>
+                        <div class="value" id="finance-active-subs">0</div>
+                        <div class="change">Đang sử dụng</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <h3>Người dùng miễn phí</h3>
+                            <div class="icon" style="background: rgba(107,114,128,0.1); color: #6B7280;">👤</div>
+                        </div>
+                        <div class="value" id="finance-free-users">0</div>
+                        <div class="change">Không tạo doanh thu</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <h3>Người dùng trả phí</h3>
+                            <div class="icon" style="background: rgba(255,107,53,0.1); color: var(--primary);">💎</div>
+                        </div>
+                        <div class="value" id="finance-paid-users">0</div>
+                        <div class="change">Tạo doanh thu</div>
+                    </div>
+                </div>
+
+                <div class="admin-table-container">
+                    <div class="table-toolbar">
+                        <h3>Lịch sử doanh thu</h3>
+                    </div>
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Ngày</th>
+                                <th>Người dùng mới</th>
+                                <th>Free</th>
+                                <th>Paid</th>
+                            </tr>
+                        </thead>
+                        <tbody id="revenue-history-body">
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-gray);">
+                                    Đang tải...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Logs Tab -->
+            <div id="logs" class="tab-panel">
+                <div class="admin-table-container">
+                    <div class="table-toolbar">
+                        <h3>Nhật ký hoạt động</h3>
+                        <div class="table-actions">
+                            <select class="filter-select" id="log-action-filter">
+                                <option value="">Tất cả</option>
+                                <option value="register">Đăng ký</option>
+                                <option value="login">Đăng nhập</option>
+                                <option value="tts">TTS</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Hành động</th>
+                                <th>Thời gian</th>
+                                <th>Chi tiết</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-table-body">
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-gray);">
+                                    Đang tải...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="pagination">
+                        <div class="pagination-info" id="logs-pagination-info">
+                            Hiển thị 0 - 0 của 0
+                        </div>
+                        <div class="pagination-btns" id="logs-pagination-btns">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api/admin';
+        
+        // State
+        let currentTab = 'dashboard';
+        let usersPage = 1;
+        let subsPage = 1;
+        let logsPage = 1;
+        const pageSize = 20;
+
+        // Tab Navigation
+        document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const tab = e.currentTarget.dataset.tab;
+                switchTab(tab);
+            });
+        });
+
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update nav
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tab}"]`)?.classList.add('active');
+            
+            // Update tabs
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.getElementById(tab)?.classList.add('active');
+            
+            // Update title
+            const titles = {
+                dashboard: 'Dashboard',
+                users: 'Quản lý người dùng',
+                subscriptions: 'Quản lý đăng ký',
+                finance: 'Tài chính',
+                logs: 'Nhật ký hoạt động'
+            };
+            document.getElementById('page-title').textContent = titles[tab] || 'Admin';
+            
+            // Load data
+            loadData(tab);
+        }
+
+        async function loadData(tab) {
+            switch(tab) {
+                case 'dashboard':
+                    await loadDashboard();
+                    break;
+                case 'users':
+                    await loadUsers();
+                    break;
+                case 'subscriptions':
+                    await loadSubscriptions();
+                    break;
+                case 'payments':
+                    await loadPayments();
+                    break;
+                case 'finance':
+                    await loadFinance();
+                    break;
+                case 'logs':
+                    await loadLogs();
+                    break;
+            }
+        }
+
+        async function api(endpoint, options = {}) {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const res = await fetch(`${API_BASE}${endpoint}`, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token && { 'Authorization': `Bearer ${token}` }),
+                        ...options.headers
+                    }
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } catch (e) {
+                console.error('API Error:', e);
+                return null;
+            }
+        }
+
+        // Dashboard
+        async function loadDashboard() {
+            const stats = await api('/dashboard');
+            if (!stats) return;
+
+            document.getElementById('stat-total-users').textContent = stats.total_users || 0;
+            document.getElementById('stat-new-users').textContent = `+${stats.new_users_this_month} người tháng này`;
+            document.getElementById('stat-paid-users').textContent = stats.paid_users || 0;
+            document.getElementById('stat-paid-percent').textContent = `${((stats.paid_users / stats.total_users) * 100).toFixed(1)}% tổng người dùng`;
+            document.getElementById('stat-active-sessions').textContent = stats.active_sessions || 0;
+            document.getElementById('stat-usage-month').textContent = stats.usage_this_month || 0;
+
+            // Load revenue
+            const finance = await api('/finance/stats');
+            if (finance) {
+                document.getElementById('finance-total-revenue').textContent = `$${finance.total_revenue.toFixed(2)}`;
+                document.getElementById('finance-active-subs').textContent = finance.active_subscriptions;
+                document.getElementById('finance-free-users').textContent = finance.free_users;
+                document.getElementById('finance-paid-users').textContent = finance.paid_users;
+                
+                updateRevenueList(finance);
+            }
+
+            // Load user history
+            const history = await api('/finance/revenue?days=30');
+            if (history) {
+                updateUserChart(history.history);
+            }
+        }
+
+        function updateRevenueList(finance) {
+            const plans = [
+                { key: 'free', name: 'Free', icon: 'free' },
+                { key: 'basic', name: 'Basic', icon: 'basic' },
+                { key: 'pro', name: 'Pro', icon: 'pro' },
+                { key: 'enterprise', name: 'Enterprise', icon: 'enterprise' }
+            ];
+
+            const html = plans.map(plan => {
+                const users = plan.key === 'free' ? finance.free_users : 
+                    (plan.key === 'basic' ? Math.floor(finance.paid_users * 0.5) : 
+                    (plan.key === 'pro' ? Math.floor(finance.paid_users * 0.35) : 
+                    Math.floor(finance.paid_users * 0.15)));
+                const revenue = finance.revenue_by_plan[plan.key] || 0;
+                
+                return `
+                    <li class="revenue-item">
+                        <div class="revenue-plan">
+                            <div class="icon ${plan.icon}">${plan.name[0]}</div>
+                            <div>
+                                <h4>${plan.name}</h4>
+                                <span>${plan.key === 'free' ? 'Miễn phí' : `$${revenue === 0 ? '9.99' : (revenue/users).toFixed(2)}/tháng`}</span>
+                            </div>
+                        </div>
+                        <div class="revenue-amount">
+                            <div class="amount">$${revenue.toFixed(2)}</div>
+                            <div class="count">${users} người</div>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+
+            document.getElementById('revenue-list').innerHTML = html;
+        }
+
+        function updateUserChart(history) {
+            const chart = document.getElementById('user-chart');
+            if (!history || history.length === 0) {
+                chart.innerHTML = '<span>Không có dữ liệu</span>';
+                return;
+            }
+
+            const maxCount = Math.max(...history.map(h => h.count), 1);
+            const bars = history.map(h => {
+                const height = (h.count / maxCount) * 100;
+                return `<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;">
+                    <div style="width:12px; background:var(--primary); border-radius:4px 4px 0 0; height:${height}%;"></div>
+                    <span style="font-size:10px; color:var(--text-gray); margin-top:4px;">${h._id.slice(5)}</span>
+                </div>`;
+            }).join('');
+
+            chart.innerHTML = `<div style="display:flex; align-items:flex-end; height:200px; gap:4px; width:100%; padding:0 20px;">${bars}</div>`;
+        }
+
+        // Users
+        async function loadUsers(page = 1) {
+            usersPage = page;
+            const search = document.getElementById('user-search')?.value || '';
+            const plan = document.getElementById('user-plan-filter')?.value || '';
+            const verified = document.getElementById('user-verified-filter')?.value || '';
+
+            let url = `/users?page=${page}&page_size=${pageSize}`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+            if (plan) url += `&plan=${plan}`;
+            if (verified) url += `&verified=${verified}`;
+
+            const data = await api(url);
+            if (!data) return;
+
+            const tbody = document.getElementById('users-table-body');
+            if (data.users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-gray);">Không có người dùng</td></tr>';
+            } else {
+                tbody.innerHTML = data.users.map(user => `
+                    <tr>
+                        <td>
+                            <div class="user-cell">
+                                <div class="user-avatar">${user.email[0].toUpperCase()}</div>
+                                <div class="user-info">
+                                    <span class="user-name">${user.username || 'N/A'}</span>
+                                    <span class="user-email">${user.email}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${user.phone || '-'}</td>
+                        <td><span class="badge badge-${getPlanBadge(user.subscription_plan)}">${user.subscription_plan}</span></td>
+                        <td><span class="badge badge-${user.is_verified ? 'success' : 'warning'}">${user.is_verified ? 'Đã xác thực' : 'Chưa xác thực'}</span></td>
+                        <td>${new Date(user.created_at).toLocaleDateString('vi-VN')}</td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="btn-action view" title="Xem" onclick="viewUser('${user.id}')">👁</button>
+                                <button class="btn-action edit" title="Sửa" onclick="editUser('${user.id}')">✏️</button>
+                                <button class="btn-action delete" title="Xóa" onclick="deleteUser('${user.id}')">🗑</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            updatePagination('users', data.total, page, pageSize);
+        }
+
+        function getPlanBadge(plan) {
+            const badges = { free: 'info', basic: 'success', pro: 'warning', enterprise: 'danger' };
+            return badges[plan] || 'info';
+        }
+
+        function updatePagination(type, total, current, size) {
+            const start = (current - 1) * size + 1;
+            const end = Math.min(current * size, total);
+            
+            document.getElementById(`${type}-pagination-info`).textContent = 
+                total === 0 ? 'Không có dữ liệu' : `Hiển thị ${start} - ${end} của ${total}`;
+
+            const totalPages = Math.ceil(total / size);
+            let btns = '';
+            for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+                btns += `<button class="pagination-btn ${i === current ? 'active' : ''}" onclick="load${capitalize(type)}(${i})">${i}</button>`;
+            }
+            document.getElementById(`${type}-pagination-btns`).innerHTML = btns;
+        }
+
+        function capitalize(s) {
+            return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+
+        async function viewUser(id) {
+            const data = await api(`/users/${id}`);
+            if (data) {
+                alert(`User: ${data.user.email}\nPlan: ${data.user.subscription_plan}\nCreated: ${new Date(data.user.created_at).toLocaleDateString('vi-VN')}`);
+            }
+        }
+
+        async function editUser(id) {
+            const plan = prompt('Nhập gói mới (free, basic, pro, enterprise):');
+            if (!plan) return;
+            
+            const res = await api(`/users/${id}?plan=${plan}`, { method: 'PUT' });
+            if (res) {
+                alert('Đã cập nhật!');
+                loadUsers(usersPage);
+            }
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('Bạn có chắc muốn xóa người dùng này?')) return;
+            
+            const res = await api(`/users/${id}`, { method: 'DELETE' });
+            if (res) {
+                alert('Đã xóa!');
+                loadUsers(usersPage);
+            }
+        }
+
+        // Subscriptions
+        async function loadSubscriptions(page = 1) {
+            subsPage = page;
+            const plan = document.getElementById('sub-plan-filter')?.value || '';
+            const status = document.getElementById('sub-status-filter')?.value || '';
+
+            let url = `/subscriptions?page=${page}&page_size=${pageSize}`;
+            if (plan) url += `&plan=${plan}`;
+            if (status) url += `&status=${status}`;
+
+            const data = await api(url);
+            if (!data) return;
+
+            const tbody = document.getElementById('subscriptions-table-body');
+            if (data.subscriptions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-gray);">Không có đăng ký</td></tr>';
+            } else {
+                tbody.innerHTML = data.subscriptions.map(sub => `
+                    <tr>
+                        <td>${sub.user_email}</td>
+                        <td><span class="badge badge-${getPlanBadge(sub.plan)}">${sub.plan}</span></td>
+                        <td><span class="badge badge-${getStatusBadge(sub.status)}">${sub.status}</span></td>
+                        <td>${new Date(sub.started_at).toLocaleDateString('vi-VN')}</td>
+                        <td>${sub.expires_at ? new Date(sub.expires_at).toLocaleDateString('vi-VN') : 'Không giới hạn'}</td>
+                        <td>${sub.auto_renew ? '✅' : '❌'}</td>
+                        <td>
+                            ${sub.status === 'pending' ? `
+                                <div class="action-btns">
+                                    <button class="btn-action approve" title="Duyệt" onclick="approveSubscription('${sub.id}')">✅</button>
+                                    <button class="btn-action reject" title="Từ chối" onclick="rejectSubscription('${sub.id}')">❌</button>
+                                </div>
+                            ` : '-'}
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            updatePagination('subscriptions', data.total, page, pageSize);
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': 'warning',
+                'active': 'success',
+                'expired': 'danger',
+                'rejected': 'danger'
+            };
+            return badges[status] || 'secondary';
+        }
+
+        async function approveSubscription(subId) {
+            if (!confirm('Duyệt đăng ký này?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/subscriptions/${subId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    }
+                });
+                if (res.ok) {
+                    alert('Đã duyệt thành công!');
+                    loadSubscriptions(subsPage);
+                } else {
+                    const err = await res.json();
+                    alert('Lỗi: ' + (err.detail || 'Không thể duyệt'));
+                }
+            } catch (e) {
+                alert('Lỗi kết nối');
+            }
+        }
+
+        async function rejectSubscription(subId) {
+            if (!confirm('Từ chối đăng ký này?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/subscriptions/${subId}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    }
+                });
+                if (res.ok) {
+                    alert('Đã từ chối!');
+                    loadSubscriptions(subsPage);
+                } else {
+                    const err = await res.json();
+                    alert('Lỗi: ' + (err.detail || 'Không thể từ chối'));
+                }
+            } catch (e) {
+                alert('Lỗi kết nối');
+            }
+        }
+
+        // Payments
+        async function loadPayments(page = 1) {
+            paymentsPage = page;
+            const status = document.getElementById('payment-status-filter')?.value || '';
+
+            let url = `/payments?page=${page}&page_size=${pageSize}`;
+            if (status) url += `&status=${status}`;
+
+            const data = await api(url);
+            if (!data) return;
+
+            const tbody = document.getElementById('payments-table-body');
+            if (data.payments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-gray);">Không có đơn hàng</td></tr>';
+            } else {
+                tbody.innerHTML = data.payments.map(p => `
+                    <tr>
+                        <td><code style="font-size:12px">${p.order_id}</code></td>
+                        <td>${p.user_email}</td>
+                        <td><span class="badge badge-${getPlanBadge(p.plan)}">${p.plan}</span></td>
+                        <td>${p.amount.toLocaleString('vi-VN')}đ</td>
+                        <td>${getMethodName(p.method)}</td>
+                        <td><span class="badge badge-${getPaymentStatusBadge(p.status)}">${getPaymentStatusText(p.status)}</span></td>
+                        <td>${new Date(p.created_at).toLocaleDateString('vi-VN')}</td>
+                        <td>
+                            ${(p.status === 'pending' || p.status === 'completed') ? `
+                                <div class="action-btns">
+                                    <button class="btn-action approve" title="Duyệt" onclick="approvePayment('${p.order_id}')">✅</button>
+                                    <button class="btn-action reject" title="Từ chối" onclick="rejectPayment('${p.order_id}')">❌</button>
+                                </div>
+                            ` : '-'}
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            updatePagination('payments', data.total, page, pageSize);
+        }
+
+        function getMethodName(method) {
+            const names = {
+                'vnpay': 'VNPay',
+                'momo': 'MoMo',
+                'banking': 'Chuyển khoản',
+                'cash': 'Tiền mặt'
+            };
+            return names[method] || method;
+        }
+
+        function getPaymentStatusBadge(status) {
+            const badges = {
+                'pending': 'warning',
+                'completed': 'success',
+                'approved': 'success',
+                'rejected': 'danger',
+                'failed': 'danger'
+            };
+            return badges[status] || 'secondary';
+        }
+
+        function getPaymentStatusText(status) {
+            const texts = {
+                'pending': 'Chờ xử lý',
+                'completed': 'Hoàn thành',
+                'approved': 'Đã duyệt',
+                'rejected': 'Từ chối',
+                'failed': 'Thất bại'
+            };
+            return texts[status] || status;
+        }
+
+        async function approvePayment(orderId) {
+            if (!confirm('Duyệt thanh toán này?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/payments/${orderId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    }
+                });
+                if (res.ok) {
+                    alert('Đã duyệt thành công!');
+                    loadPayments(paymentsPage);
+                } else {
+                    const err = await res.json();
+                    alert('Lỗi: ' + (err.detail || 'Không thể duyệt'));
+                }
+            } catch (e) {
+                alert('Lỗi kết nối');
+            }
+        }
+
+        async function rejectPayment(orderId) {
+            const reason = prompt('Lý do từ chối (tùy chọn):');
+            try {
+                const res = await fetch(`${API_BASE}/payments/${orderId}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    },
+                    body: JSON.stringify({ reason })
+                });
+                if (res.ok) {
+                    alert('Đã từ chối!');
+                    loadPayments(paymentsPage);
+                } else {
+                    const err = await res.json();
+                    alert('Lỗi: ' + (err.detail || 'Không thể từ chối'));
+                }
+            } catch (e) {
+                alert('Lỗi kết nối');
+            }
+        }
+
+        // Finance
+        async function loadFinance() {
+            const data = await api('/finance/stats');
+            if (!data) return;
+
+            document.getElementById('finance-total-revenue').textContent = `$${data.total_revenue.toFixed(2)}`;
+            document.getElementById('finance-active-subs').textContent = data.active_subscriptions;
+            document.getElementById('finance-free-users').textContent = data.free_users;
+            document.getElementById('finance-paid-users').textContent = data.paid_users;
+
+            // Load history
+            const history = await api('/finance/revenue?days=30');
+            if (history && history.history.length > 0) {
+                const tbody = document.getElementById('revenue-history-body');
+                tbody.innerHTML = history.history.map(h => `
+                    <tr>
+                        <td>${h._id}</td>
+                        <td>${h.count}</td>
+                        <td>${h.free}</td>
+                        <td>${h.paid}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // Logs
+        async function loadLogs(page = 1) {
+            logsPage = page;
+            const action = document.getElementById('log-action-filter')?.value || '';
+
+            let url = `/usage/logs?page=${page}&page_size=${pageSize}&days=30`;
+            if (action) url += `&action=${action}`;
+
+            const data = await api(url);
+            if (!data) return;
+
+            const tbody = document.getElementById('logs-table-body');
+            if (data.logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-gray);">Không có nhật ký</td></tr>';
+            } else {
+                tbody.innerHTML = data.logs.map(log => `
+                    <tr>
+                        <td>${log.user_email}</td>
+                        <td><span class="badge badge-${getActionBadge(log.action)}">${log.action}</span></td>
+                        <td>${new Date(log.timestamp).toLocaleString('vi-VN')}</td>
+                        <td>${JSON.stringify(log.metadata || {}).slice(0, 50)}...</td>
+                    </tr>
+                `).join('');
+            }
+
+            updatePagination('logs', data.total, page, pageSize);
+        }
+
+        function getActionBadge(action) {
+            const badges = { register: 'success', login: 'info', tts: 'warning' };
+            return badges[action] || 'info';
+        }
+
+        // Event listeners
+        document.getElementById('user-search')?.addEventListener('input', () => loadUsers(1));
+        document.getElementById('user-plan-filter')?.addEventListener('change', () => loadUsers(1));
+        document.getElementById('user-verified-filter')?.addEventListener('change', () => loadUsers(1));
+        document.getElementById('sub-plan-filter')?.addEventListener('change', () => loadSubscriptions(1));
+        document.getElementById('sub-status-filter')?.addEventListener('change', () => loadSubscriptions(1));
+        document.getElementById('payment-status-filter')?.addEventListener('change', () => loadPayments(1));
+        document.getElementById('log-action-filter')?.addEventListener('change', () => loadLogs(1));
+
+        // Check admin access
+        async function checkAdminAccess() {
+            const user = PhuongAnhTTS.getCurrentUser();
+            const token = PhuongAnhTTS.getAuthToken();
+
+            if (!user || !token) {
+                alert('Vui lòng đăng nhập để truy cập trang Admin!');
+                location.href = '/login?redirect=/admin';
+                return false;
+            }
+
+            if (user.role !== 'admin') {
+                alert('Bạn không có quyền truy cập trang Admin!');
+                location.href = '/profile';
+                return false;
+            }
+
+            return true;
+        }
+
+        // Init
+        async function init() {
+            const hasAccess = await checkAdminAccess();
+            if (!hasAccess) return;
+
+            // Handle hash routing
+            handleRoute();
+
+            // Listen for hash changes
+            window.addEventListener('hashchange', handleRoute);
+        }
+
+        function handleRoute() {
+            const hash = window.location.hash || '#dashboard';
+            switchTab(hash.substring(1));
+        }
+
+        init();
+    </script>
+</body>
+</html>

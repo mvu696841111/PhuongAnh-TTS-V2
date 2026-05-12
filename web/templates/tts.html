@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS - Phương Anh TTS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css?v=2.8">
+    <style>
+        /* TTS Page Specific Styles */
+        .tts-page {
+            min-height: 100vh;
+            background: linear-gradient(180deg, var(--bg-gray) 0%, var(--bg-white) 100%);
+        }
+        
+        .tts-main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 100px 24px 60px;
+        }
+        
+        .tts-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .tts-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+        }
+        
+        .tts-header p {
+            color: var(--text-gray);
+        }
+        
+        /* Tabs */
+        .tts-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0;
+        }
+        
+        .tts-tab {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-gray);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: var(--transition);
+        }
+        
+        .tts-tab:hover {
+            color: var(--primary);
+        }
+        
+        .tts-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 24px;
+            background: var(--bg-white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Voice Selection */
+        .voice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            margin: 20px 0;
+        }
+        
+        .voice-card {
+            padding: 16px;
+            background: var(--bg-gray);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .voice-card:hover {
+            border-color: var(--primary-light);
+        }
+        
+        .voice-card.selected {
+            border-color: var(--primary);
+            background: rgba(255, 107, 53, 0.05);
+        }
+        
+        .voice-card .voice-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .voice-card .voice-desc {
+            font-size: 12px;
+            color: var(--text-gray);
+        }
+        
+        /* Settings Panel */
+        .settings-panel {
+            background: var(--bg-gray);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .settings-panel h4 {
+            margin-bottom: 16px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-gray);
+        }
+        
+        .setting-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 16px;
+        }
+        
+        .setting-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .setting-label {
+            min-width: 140px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .setting-slider {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+        }
+        
+        .setting-value {
+            min-width: 50px;
+            text-align: right;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        /* Voice Clone */
+        .clone-upload {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 20px;
+        }
+        
+        .clone-upload:hover {
+            border-color: var(--primary);
+        }
+        
+        .clone-upload.dragover {
+            border-color: var(--primary);
+            background: rgba(255, 107, 53, 0.05);
+        }
+        
+        .clone-upload input {
+            display: none;
+        }
+        
+        .clone-upload .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .clone-upload .text {
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+        
+        /* Audio Result */
+        .audio-result {
+            margin-top: 24px;
+            padding: 24px;
+            background: var(--bg-gray);
+            border-radius: var(--radius);
+            display: none;
+        }
+        
+        .audio-result.show {
+            display: block;
+        }
+        
+        .audio-player-large {
+            width: 100%;
+            margin-bottom: 16px;
+        }
+        
+        .audio-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .loading-overlay.show {
+            display: flex;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        .loading-text {
+            font-size: 16px;
+            color: var(--text-gray);
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* History */
+        .history-item {
+            padding: 12px 16px;
+            background: var(--bg-gray);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .history-item:hover {
+            background: var(--border);
+        }
+        
+        .history-item .text {
+            font-size: 14px;
+            color: var(--text-dark);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 300px;
+        }
+        
+        .history-item .time {
+            font-size: 12px;
+            color: var(--text-gray);
+            white-space: nowrap;
+        }
+        
+        /* Status Bar */
+        .status-bar {
+            background: var(--bg-white);
+            border-radius: var(--radius);
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: var(--shadow-sm);
+            font-size: 14px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .status-dot.online {
+            background: #10B981;
+            box-shadow: 0 0 8px #10B981;
+        }
+        
+        .status-dot.offline {
+            background: #EF4444;
+        }
+    </style>
+</head>
+<body class="tts-page">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">
+                <div class="logo">P</div>
+                <div class="brand-name">Phương <span>Anh</span> TTS</div>
+            </a>
+            
+            <div class="navbar-menu">
+                <a href="/">Trang chủ</a>
+                <a href="/about">Giới thiệu</a>
+                <a href="/pricing">Bảng giá</a>
+                <a href="/finance">Tài chính</a>
+                <a href="/tts" class="active">TTS</a>
+            </div>
+            
+            <div class="navbar-actions" id="navbarActions">
+                <a href="/login" class="btn btn-outline">Đăng nhập</a>
+                <a href="/register" class="btn btn-primary">Đăng ký</a>
+            </div>
+            
+            <div class="menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Menu -->
+    <div class="mobile-menu">
+        <a href="/">Trang chủ</a>
+        <a href="/about">Giới thiệu</a>
+        <a href="/finance">Tài chính</a>
+        <a href="/tts" class="active">TTS</a>
+        <a href="/login" class="btn btn-outline">Đăng nhập</a>
+        <a href="/register" class="btn btn-primary">Đăng ký</a>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">Đang khởi động...</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="tts-main">
+        <div class="tts-header">
+            <h1>🎵 Text to Speech</h1>
+            <p>Chuyển văn bản thành giọng nói tiếng Việt tự nhiên</p>
+        </div>
+
+        <!-- Status Bar -->
+
+
+        <!-- Tabs -->
+        <div class="tts-tabs">
+            <button class="tts-tab active" data-tab="preset">👤 Preset Voices</button>
+            <button class="tts-tab" data-tab="clone">🦜 Voice Cloning</button>
+            <button class="tts-tab" data-tab="history">📜 Lịch sử</button>
+        </div>
+
+        <!-- Preset Tab -->
+        <div class="tab-content active" id="tab-preset">
+            <!-- Text Input -->
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">✏️ Văn bản</label>
+                <textarea 
+                    id="textInput" 
+                    class="tts-textarea" 
+                    style="min-height: 150px; border: 2px solid var(--border); border-radius: var(--radius-sm);"
+                    placeholder="Nhập văn bản tiếng Việt cần chuyển thành giọng nói...">Phương Anh TTS là ứng dụng chuyển văn bản thành giọng nói với giao diện đơn giản, hiện đại, tông màu cam trắng dễ sử dụng. Ứng dụng hỗ trợ đọc nội dung tự nhiên, giúp học tập, làm việc và tiếp cận thông tin nhanh hơn qua âm thanh.</textarea>
+            </div>
+
+            <!-- Voice Selection -->
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 12px;">🎤 Chọn giọng đọc</label>
+                <div class="voice-grid" id="voiceGrid">
+                    <div class="voice-card selected" data-voice="Ly" onclick="selectVoice(this)">
+                        <div class="voice-name">🧑 Trúc Ly</div>
+                        <div class="voice-desc">Nữ miền Bắc - Giọng nữ cao, trong sáng</div>
+                    </div>
+                    <div class="voice-card" data-voice="Tuyen" onclick="selectVoice(this)">
+                        <div class="voice-name">👨 Tuyên</div>
+                        <div class="voice-desc">Nam miền Bắc - Giọng nam trung, ấm áp</div>
+                    </div>
+                    <div class="voice-card" data-voice="Vinh" onclick="selectVoice(this)">
+                        <div class="voice-name">👨 Xuân Vĩnh</div>
+                        <div class="voice-desc">Nam miền Nam - Giọng nam trẻ, năng động</div>
+                    </div>
+                    <div class="voice-card" data-voice="Doan" onclick="selectVoice(this)">
+                        <div class="voice-name">👩 Thục Đoan</div>
+                        <div class="voice-desc">Nữ miền Nam - Giọng nữ trung, dịu dàng</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">📋 Format</label>
+                <select id="formatSelect" style="padding: 8px 16px; border: 2px solid var(--border); border-radius: var(--radius-sm); font-size: 14px;">
+                    <option value="wav">WAV (Best Quality)</option>
+                    <option value="mp3">MP3</option>
+                    <option value="ogg">OGG</option>
+                </select>
+            </div>
+
+            <!-- Generate Button -->
+            <div style="margin-top: 24px; text-align: center;">
+                <button id="generateBtn" onclick="generateAudio()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 16px 48px; font-size: 18px; font-weight: 600; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: all 0.3s ease;">
+                    🎵 Bắt đầu tạo audio
+                </button>
+            </div>
+        </div>
+
+        <!-- Voice Clone Tab -->
+        <div class="tab-content" id="tab-clone">
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">✏️ Văn bản</label>
+                <textarea 
+                    id="cloneText" 
+                    class="tts-textarea" 
+                    style="min-height: 150px; border: 2px solid var(--border); border-radius: var(--radius-sm);"
+                    placeholder="Nhập văn bản cần chuyển thành giọng nói..."
+                ></textarea>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">🎤 Audio giọng mẫu (3-5 giây)</label>
+                <div class="clone-upload" id="cloneUpload" onclick="document.getElementById('cloneAudioInput').click()">
+                    <input type="file" id="cloneAudioInput" accept="audio/*" onchange="handleCloneUpload(this)">
+                    <div class="icon">🎙️</div>
+                    <div class="text">Kéo thả file audio hoặc click để chọn<br>(.wav, .mp3, .ogg)</div>
+                </div>
+                <div id="cloneFileName" style="text-align: center; font-size: 14px; color: var(--text-gray);"></div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">📝 Nội dung audio mẫu</label>
+                <input type="text" id="refText" style="width: 100%; padding: 12px 16px; border: 2px solid var(--border); border-radius: var(--radius-sm); font-size: 15px;" placeholder="Nhập chính xác nội dung audio giọng mẫu (kể cả dấu câu)">
+            </div>
+
+            <div style="text-align: center;">
+                <button id="cloneBtn" class="btn btn-primary btn-lg" onclick="generateCloneAudio()">
+                    🦜 Tạo audio với giọng clone
+                </button>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div class="tab-content" id="tab-history">
+            <div id="historyList">
+                <div style="text-align: center; padding: 40px; color: var(--text-gray);">
+                    Chưa có lịch sử tạo audio
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio Result -->
+        <div class="audio-result" id="audioResult">
+            <h3 style="margin-bottom: 16px; text-align: center;">🎧 Kết quả</h3>
+            <audio id="audioPlayer" controls class="audio-player-large">
+                Your browser does not support audio.
+            </audio>
+            <div class="audio-actions">
+                <button class="btn btn-outline" onclick="downloadAudio()">
+                    ⬇️ Tải xuống
+                </button>
+                <button class="btn btn-primary" onclick="playPause()">
+                    ▶️ Phát lại
+                </button>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMsg" class="alert alert-error" style="display: none; margin-top: 20px;"></div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="logo">P</div>
+                <h3>Phương Anh TTS</h3>
+                <p>Hệ thống Text to Speech tiếng Việt chất lượng cao.</p>
+            </div>
+            <div class="footer-column">
+                <h4>Liên kết</h4>
+                <ul>
+                    <li><a href="/">Trang chủ</a></li>
+                    <li><a href="/about">Giới thiệu</a></li>
+                    <li><a href="/tts">TTS</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h4>Hỗ trợ</h4>
+                <ul>
+                    <li><a href="#">Tài liệu</a></li>
+                    <li><a href="#">API</a></li>
+                    <li><a href="#">Liên hệ</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h4>Pháp lý</h4>
+                <ul>
+                    <li><a href="#">Điều khoản</a></li>
+                    <li><a href="#">Bảo mật</a></li>
+                    <li><a href="#">Bản quyền</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2024 Phương Anh TTS. Tất cả quyền được bảo lưu.</p>
+            <p>Nguyễn Phương Anh - Text to Speech</p>
+        </div>
+    </footer>
+
+    <script src="/static/js/app.js?v=2.9"></script>
+    <script>
+        // State
+        let selectedVoice = 'Ly';
+        let currentAudioUrl = null;
+        let history = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initTabs();
+            initSliders();
+            initDragDrop();
+            updateUserStatus();
+            loadHistory();
+            updateDeviceStatus();
+        });
+
+        // Tabs
+        function initTabs() {
+            document.querySelectorAll('.tts-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tts-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    const targetTab = document.getElementById('tab-' + tab.dataset.tab);
+                    if (targetTab) targetTab.classList.add('active');
+                });
+            });
+        }
+
+        // Sliders
+        function initSliders() {
+            const tempSlider = document.getElementById('temperature');
+            const tempVal = document.getElementById('temperatureVal');
+            if (tempSlider && tempVal) {
+                tempSlider.addEventListener('input', () => {
+                    tempVal.textContent = tempSlider.value;
+                });
+            }
+
+            const maxSlider = document.getElementById('maxChars');
+            const maxVal = document.getElementById('maxCharsVal');
+            if (maxSlider && maxVal) {
+                maxSlider.addEventListener('input', () => {
+                    maxVal.textContent = maxSlider.value;
+                });
+            }
+        }
+
+        // Voice Selection
+        function selectVoice(card) {
+            document.querySelectorAll('.voice-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            selectedVoice = card.dataset.voice;
+        }
+
+        // Drag & Drop
+        function initDragDrop() {
+            const upload = document.getElementById('cloneUpload');
+            const input = document.getElementById('cloneAudioInput');
+
+            upload.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                upload.classList.add('dragover');
+            });
+
+            upload.addEventListener('dragleave', () => {
+                upload.classList.remove('dragover');
+            });
+
+            upload.addEventListener('drop', (e) => {
+                e.preventDefault();
+                upload.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    input.files = e.dataTransfer.files;
+                    handleCloneUpload(input);
+                }
+            });
+        }
+
+        function handleCloneUpload(input) {
+            if (input.files.length) {
+                const fileName = input.files[0].name;
+                document.getElementById('cloneFileName').textContent = '✅ Đã chọn: ' + fileName;
+            }
+        }
+
+        // User Status
+        function updateUserStatus() {
+            const token = localStorage.getItem('auth_token');
+            const user = localStorage.getItem('user');
+            const userStatus = document.getElementById('userStatus');
+            const navbarActions = document.getElementById('navbarActions');
+
+            if (token && user) {
+                const userData = JSON.parse(user);
+                userStatus.textContent = userData.email || 'User';
+                navbarActions.innerHTML = `
+                    <span style="font-size: 14px; color: var(--text-gray);">Xin chào, ${userData.email || 'User'}</span>
+                    <button class="btn btn-outline" onclick="logout()">Đăng xuất</button>
+                `;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+            window.location.reload();
+        }
+
+        // Device Status
+        async function updateDeviceStatus() {
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                const data = await response.json();
+                document.getElementById('engineStatus').classList.add('online');
+                document.getElementById('deviceType').textContent = 'CUDA/GPU';
+            } catch (e) {
+                document.getElementById('engineStatus').classList.add('offline');
+                document.getElementById('deviceType').textContent = 'CPU';
+            }
+        }
+
+        // Generate Audio
+        async function generateAudio() {
+            const textEl = document.getElementById('textInput');
+            const formatEl = document.getElementById('formatSelect');
+            const text = textEl ? textEl.value.trim() : '';
+            const format = formatEl ? formatEl.value : 'wav';
+
+            if (!text) {
+                showError('Vui lòng nhập văn bản cần chuyển thành giọng nói.');
+                return;
+            }
+
+            const generateBtn = document.getElementById('generateBtn');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+            const errorMsg = document.getElementById('errorMsg');
+            const audioResult = document.getElementById('audioResult');
+
+            // Show loading
+            if (generateBtn) generateBtn.disabled = true;
+            if (generateBtn) generateBtn.innerHTML = '<span class="loading"></span> Đang xử lý...';
+            if (loadingOverlay) loadingOverlay.classList.add('show');
+            if (loadingText) loadingText.textContent = 'Đang khởi tạo model...';
+            if (errorMsg) errorMsg.style.display = 'none';
+            if (audioResult) audioResult.classList.remove('show');
+
+            try {
+                loadingText.textContent = 'Đang tạo audio...';
+
+                const formData = new FormData();
+                formData.append('text', text);
+                formData.append('voice_id', selectedVoice);
+                formData.append('format', 'wav');
+
+                const token = localStorage.getItem('auth_token');
+                const headers = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                const response = await fetch('http://localhost:8000/api/audio/generate-form', {
+                    method: 'POST',
+                    body: formData,
+                    headers
+                });
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({ detail: 'Lỗi không xác định' }));
+                    throw new Error(error.detail || `HTTP ${response.status}`);
+                }
+
+                // Get audio blob
+                const blob = await response.blob();
+                const audioUrl = URL.createObjectURL(blob);
+                
+                // Display audio
+                document.getElementById('audioPlayer').src = audioUrl;
+                audioResult.classList.add('show');
+                currentAudioUrl = audioUrl;
+
+                // Save to history
+                addToHistory(text, selectedVoice, format);
+
+                // Play
+                const audioPlayer = document.getElementById('audioPlayer');
+                if (audioPlayer) audioPlayer.play();
+
+            } catch (error) {
+                showError(error.message || 'Đã xảy ra lỗi. Vui lòng thử lại.');
+            } finally {
+                if (generateBtn) generateBtn.disabled = false;
+                if (generateBtn) generateBtn.innerHTML = '🎵 Bắt đầu tạo audio';
+                if (loadingOverlay) loadingOverlay.classList.remove('show');
+            }
+        }
+
+        // Clone Audio
+        async function generateCloneAudio() {
+            const text = document.getElementById('cloneText').value.trim();
+            const refAudio = document.getElementById('cloneAudioInput').files[0];
+            const refText = document.getElementById('refText').value.trim();
+            const cloneBtn = document.getElementById('cloneBtn');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+            const errorMsg = document.getElementById('errorMsg');
+
+            if (!text) {
+                showError('Vui lòng nhập văn bản cần chuyển thành giọng nói.');
+                return;
+            }
+
+            if (!refAudio) {
+                showError('Vui lòng upload audio giọng mẫu.');
+                return;
+            }
+
+            if (!refText) {
+                showError('Vui lòng nhập nội dung audio giọng mẫu.');
+                return;
+            }
+
+            cloneBtn.disabled = true;
+            cloneBtn.innerHTML = '<span class="loading"></span> Đang xử lý...';
+            loadingOverlay.classList.add('show');
+            loadingText.textContent = 'Đang clone giọng...';
+            errorMsg.style.display = 'none';
+
+            try {
+                const formData = new FormData();
+                formData.append('text', text);
+                formData.append('ref_audio', refAudio);
+                formData.append('ref_text', refText);
+                formData.append('format', 'wav');
+
+                const response = await fetch('http://localhost:8000/api/audio/clone-generate', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Voice cloning not available yet');
+                }
+
+                const blob = await response.blob();
+                const audioUrl = URL.createObjectURL(blob);
+                document.getElementById('audioPlayer').src = audioUrl;
+                document.getElementById('audioResult').classList.add('show');
+                currentAudioUrl = audioUrl;
+
+            } catch (error) {
+                showError('Tính năng voice cloning đang trong quá trình phát triển. Vui lòng sử dụng Preset Voices.');
+            } finally {
+                cloneBtn.disabled = false;
+                cloneBtn.innerHTML = '🦜 Tạo audio với giọng clone';
+                loadingOverlay.classList.remove('show');
+            }
+        }
+
+        // Download Audio
+        function downloadAudio() {
+            if (!currentAudioUrl) return;
+            const format = document.getElementById('formatSelect').value;
+            const link = document.createElement('a');
+            link.href = currentAudioUrl;
+            link.download = `phuonganh-tts-${selectedVoice.toLowerCase()}.${format}`;
+            link.click();
+        }
+
+        // Play/Pause
+        function playPause() {
+            const audio = document.getElementById('audioPlayer');
+            if (audio.paused) {
+                audio.play();
+            } else {
+                audio.pause();
+            }
+        }
+
+        // Error
+        function showError(message) {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.textContent = message;
+            errorMsg.style.display = 'block';
+        }
+
+        // History
+        function loadHistory() {
+            const saved = localStorage.getItem('tts_history');
+            if (saved) {
+                history = JSON.parse(saved);
+                renderHistory();
+            }
+        }
+
+        function addToHistory(text, voice, format) {
+            history.unshift({
+                id: Date.now(),
+                text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+                fullText: text,
+                voice: voice,
+                format: format,
+                time: new Date().toLocaleString('vi-VN')
+            });
+            if (history.length > 20) history = history.slice(0, 20);
+            localStorage.setItem('tts_history', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('historyList');
+            if (history.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--text-gray);">
+                        Chưa có lịch sử tạo audio
+                    </div>
+                `;
+                return;
+            }
+            container.innerHTML = history.map(item => `
+                <div class="history-item" onclick="loadFromHistory(${item.id})">
+                    <span class="text">🎤 ${item.voice}: ${item.text}</span>
+                    <span class="time">${item.time}</span>
+                </div>
+            `).join('');
+        }
+
+        function loadFromHistory(id) {
+            const item = history.find(h => h.id === id);
+            if (item) {
+                document.getElementById('textInput').value = item.fullText;
+                document.querySelectorAll('.tts-tab')[0].click();
+                document.querySelectorAll('.voice-card').forEach(c => {
+                    c.classList.toggle('selected', c.dataset.voice === item.voice);
+                });
+                selectedVoice = item.voice;
+            }
+        }
+    </script>
+</body>
+</html>

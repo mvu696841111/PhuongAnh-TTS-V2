@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Phương Anh TTS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">
+                <div class="logo">P</div>
+                <div class="brand-name">Phương <span>Anh</span> TTS</div>
+            </a>
+            
+            <div class="navbar-menu">
+                <a href="/">Trang chủ</a>
+                <a href="/about">Giới thiệu</a>
+                <a href="/pricing">Bảng giá</a>
+                <a href="/finance">Tài chính</a>
+                <a href="/tts">TTS</a>
+            </div>
+            
+            <div class="navbar-actions">
+                <a href="/login" class="btn btn-outline">Đăng nhập</a>
+                <a href="/register" class="btn btn-primary">Đăng ký</a>
+            </div>
+            
+            <div class="menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Menu -->
+    <div class="mobile-menu">
+        <a href="/">Trang chủ</a>
+        <a href="/about">Giới thiệu</a>
+        <a href="/finance">Tài chính</a>
+        <a href="/tts">TTS</a>
+        <a href="/login" class="active">Đăng nhập</a>
+        <a href="/register">Đăng ký</a>
+    </div>
+
+    <!-- Auth Container -->
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo" style="width: 60px; height: 60px; margin: 0 auto 20px; font-size: 24px;">P</div>
+                <h2>Chào mừng trở lại!</h2>
+                <p>Đăng nhập để tiếp tục sử dụng dịch vụ</p>
+            </div>
+
+            <!-- Alert -->
+            <div id="alertBox" class="alert" style="display: none;"></div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        placeholder="email@example.com"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Mật khẩu</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="Nhập mật khẩu"
+                        required
+                    >
+                </div>
+
+                <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%; padding: 14px;">
+                    Đăng nhập
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Chưa có tài khoản? <a href="/register">Đăng ký ngay</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer" style="position: fixed; bottom: 0; left: 0; right: 0;">
+        <div class="footer-bottom" style="margin-top: 0; padding-top: 0; border-top: none;">
+            <p>© 2024 Phương Anh TTS. Tất cả quyền được bảo lưu.</p>
+            <p>Nguyễn Phương Anh - Text to Speech</p>
+        </div>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        // Check if already logged in
+        if (localStorage.getItem('auth_token')) {
+            window.location.href = '/tts';
+        }
+
+        // Show alert
+        function showAlert(message, type = 'success') {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.className = `alert alert-${type}`;
+            alertBox.style.display = 'block';
+        }
+
+        // Form submit
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Validate
+            if (!email || !password) {
+                showAlert('Vui lòng nhập đầy đủ thông tin!', 'error');
+                return;
+            }
+
+            // Show loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading"></span> Đang đăng nhập...';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Đăng nhập thất bại');
+                }
+
+                // Save token
+                localStorage.setItem('auth_token', data.access_token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+
+                showAlert('Đăng nhập thành công! Đang chuyển hướng...', 'success');
+                
+                // Redirect after short delay
+                setTimeout(() => {
+                    window.location.href = '/tts';
+                }, 1000);
+
+            } catch (error) {
+                showAlert(error.message || 'Đã xảy ra lỗi. Vui lòng thử lại.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Đăng nhập';
+            }
+        });
+    </script>
+</body>
+</html>

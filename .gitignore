@@ -1,0 +1,54 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.pytest_cache/
+
+# Virtual environments
+.venv
+.xpu_venv
+uvvenv/
+
+# Environment and secrets
+.env
+*.log
+
+# Outputs
+outputs/
+*.wav
+
+# Finetune Data & Checkpoints
+finetune/dataset/
+finetune/output/
+
+# Merged Models
+merged_models_cache/
+
+# Models (download from HuggingFace)
+models/
+
+# Data directories
+data/audios/
+data/temp/
+data/mongodb/
+data/redis/
+
+# PID files
+*.pid
+.services.pid
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore

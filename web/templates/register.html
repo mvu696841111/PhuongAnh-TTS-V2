@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký - Phương Anh TTS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">
+                <div class="logo">P</div>
+                <div class="brand-name">Phương <span>Anh</span> TTS</div>
+            </a>
+            
+            <div class="navbar-menu">
+                <a href="/">Trang chủ</a>
+                <a href="/about">Giới thiệu</a>
+                <a href="/pricing">Bảng giá</a>
+                <a href="/finance">Tài chính</a>
+                <a href="/tts">TTS</a>
+            </div>
+            
+            <div class="navbar-actions">
+                <a href="/login" class="btn btn-outline">Đăng nhập</a>
+                <a href="/register" class="btn btn-primary">Đăng ký</a>
+            </div>
+            
+            <div class="menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Menu -->
+    <div class="mobile-menu">
+        <a href="/">Trang chủ</a>
+        <a href="/about">Giới thiệu</a>
+        <a href="/finance">Tài chính</a>
+        <a href="/tts">TTS</a>
+        <a href="/login">Đăng nhập</a>
+        <a href="/register" class="active">Đăng ký</a>
+    </div>
+
+    <!-- Auth Container -->
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo" style="width: 60px; height: 60px; margin: 0 auto 20px; font-size: 24px;">P</div>
+                <h2>Tạo tài khoản mới</h2>
+                <p>Đăng ký để trải nghiệm dịch vụ TTS</p>
+            </div>
+
+            <!-- Alert -->
+            <div id="alertBox" class="alert" style="display: none;"></div>
+
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="email">Email <span style="color: red;">*</span></label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        placeholder="email@example.com"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Tên người dùng</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        placeholder="Nhập tên của bạn (tùy chọn)"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Mật khẩu <span style="color: red;">*</span></label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="Ít nhất 8 ký tự, có chữ hoa, chữ thường và số"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Xác nhận mật khẩu <span style="color: red;">*</span></label>
+                    <input 
+                        type="password" 
+                        id="confirmPassword" 
+                        name="confirmPassword" 
+                        placeholder="Nhập lại mật khẩu"
+                        required
+                    >
+                </div>
+
+                <!-- Password Requirements -->
+                <div style="background: var(--bg-gray); padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-dark);">
+                        Yêu cầu mật khẩu:
+                    </p>
+                    <ul style="font-size: 12px; color: var(--text-gray);">
+                        <li id="req-length" style="margin-bottom: 4px;">⭕ Ít nhất 8 ký tự</li>
+                        <li id="req-upper" style="margin-bottom: 4px;">⭕ Có ít nhất 1 chữ hoa (A-Z)</li>
+                        <li id="req-lower" style="margin-bottom: 4px;">⭕ Có ít nhất 1 chữ thường (a-z)</li>
+                        <li id="req-number">⭕ Có ít nhất 1 số (0-9)</li>
+                    </ul>
+                </div>
+
+                <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%; padding: 14px;">
+                    Đăng ký
+                </button>
+
+                <div style="margin-top: 16px; text-align: center; font-size: 13px; color: var(--text-gray);">
+                    Bằng việc đăng ký, bạn đồng ý với 
+                    <a href="#" style="color: var(--primary);">Điều khoản sử dụng</a> 
+                    và <a href="#" style="color: var(--primary);">Chính sách bảo mật</a>
+                </div>
+            </form>
+
+            <div class="auth-footer">
+                <p>Đã có tài khoản? <a href="/login">Đăng nhập ngay</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer" style="position: fixed; bottom: 0; left: 0; right: 0;">
+        <div class="footer-bottom" style="margin-top: 0; padding-top: 0; border-top: none;">
+            <p>© 2024 Phương Anh TTS. Tất cả quyền được bảo lưu.</p>
+            <p>Nguyễn Phương Anh - Text to Speech</p>
+        </div>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        // Check if already logged in
+        if (localStorage.getItem('auth_token')) {
+            window.location.href = '/tts';
+        }
+
+        // Password validation
+        const passwordInput = document.getElementById('password');
+        const reqLength = document.getElementById('req-length');
+        const reqUpper = document.getElementById('req-upper');
+        const reqLower = document.getElementById('req-lower');
+        const reqNumber = document.getElementById('req-number');
+
+        passwordInput.addEventListener('input', () => {
+            const pwd = passwordInput.value;
+            
+            // Length
+            if (pwd.length >= 8) {
+                reqLength.textContent = '✅ Ít nhất 8 ký tự';
+                reqLength.style.color = '#10B981';
+            } else {
+                reqLength.textContent = '⭕ Ít nhất 8 ký tự';
+                reqLength.style.color = '';
+            }
+            
+            // Upper
+            if (/[A-Z]/.test(pwd)) {
+                reqUpper.textContent = '✅ Có ít nhất 1 chữ hoa (A-Z)';
+                reqUpper.style.color = '#10B981';
+            } else {
+                reqUpper.textContent = '⭕ Có ít nhất 1 chữ hoa (A-Z)';
+                reqUpper.style.color = '';
+            }
+            
+            // Lower
+            if (/[a-z]/.test(pwd)) {
+                reqLower.textContent = '✅ Có ít nhất 1 chữ thường (a-z)';
+                reqLower.style.color = '#10B981';
+            } else {
+                reqLower.textContent = '⭕ Có ít nhất 1 chữ thường (a-z)';
+                reqLower.style.color = '';
+            }
+            
+            // Number
+            if (/[0-9]/.test(pwd)) {
+                reqNumber.textContent = '✅ Có ít nhất 1 số (0-9)';
+                reqNumber.style.color = '#10B981';
+            } else {
+                reqNumber.textContent = '⭕ Có ít nhất 1 số (0-9)';
+                reqNumber.style.color = '';
+            }
+        });
+
+        // Show alert
+        function showAlert(message, type = 'success') {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.className = `alert alert-${type}`;
+            alertBox.style.display = 'block';
+        }
+
+        // Form submit
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Validate
+            if (!email) {
+                showAlert('Vui lòng nhập email!', 'error');
+                return;
+            }
+
+            if (!password) {
+                showAlert('Vui lòng nhập mật khẩu!', 'error');
+                return;
+            }
+
+            if (password.length < 8) {
+                showAlert('Mật khẩu phải có ít nhất 8 ký tự!', 'error');
+                return;
+            }
+
+            if (!/[A-Z]/.test(password)) {
+                showAlert('Mật khẩu phải có ít nhất 1 chữ hoa (A-Z)!', 'error');
+                return;
+            }
+
+            if (!/[a-z]/.test(password)) {
+                showAlert('Mật khẩu phải có ít nhất 1 chữ thường (a-z)!', 'error');
+                return;
+            }
+
+            if (!/[0-9]/.test(password)) {
+                showAlert('Mật khẩu phải có ít nhất 1 số (0-9)!', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showAlert('Mật khẩu xác nhận không khớp!', 'error');
+                return;
+            }
+
+            // Show loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading"></span> Đang đăng ký...';
+
+            try {
+                const body = { email, password };
+                if (username) body.username = username;
+
+                const response = await fetch('http://localhost:8000/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || data[0]?.msg || 'Đăng ký thất bại');
+                }
+
+                showAlert('Đăng ký thành công! Đang chuyển hướng đến trang đăng nhập...', 'success');
+                
+                // Redirect to login after short delay
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 1500);
+
+            } catch (error) {
+                showAlert(error.message || 'Đã xảy ra lỗi. Vui lòng thử lại.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Đăng ký';
+            }
+        });
+    </script>
+</body>
+</html>

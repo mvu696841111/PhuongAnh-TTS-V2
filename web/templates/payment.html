@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanh toán - Phương Anh TTS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .payment-container {
+            max-width: 800px;
+            margin: 120px auto 60px;
+            padding: 0 24px;
+        }
+
+        .payment-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .payment-header h1 {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .payment-header h1 span {
+            color: var(--primary);
+        }
+
+        .payment-card {
+            background: var(--bg-white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .plan-summary {
+            background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
+            color: white;
+            padding: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .plan-summary .plan-info h3 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .plan-summary .plan-info p {
+            opacity: 0.9;
+        }
+
+        .plan-summary .plan-price {
+            text-align: right;
+        }
+
+        .plan-summary .plan-price .amount {
+            font-size: 36px;
+            font-weight: 800;
+        }
+
+        .plan-summary .plan-price .period {
+            opacity: 0.9;
+        }
+
+        .payment-methods {
+            padding: 32px;
+        }
+
+        .payment-methods h3 {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .payment-method {
+            display: flex;
+            align-items: center;
+            padding: 16px 20px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .payment-method:hover {
+            border-color: var(--primary);
+        }
+
+        .payment-method.selected {
+            border-color: var(--primary);
+            background: var(--bg-light);
+        }
+
+        .payment-method input {
+            margin-right: 16px;
+            width: 20px;
+            height: 20px;
+            accent-color: var(--primary);
+        }
+
+        .payment-method .method-info {
+            flex: 1;
+        }
+
+        .payment-method .method-info h4 {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .payment-method .method-info p {
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+
+        .payment-method .method-icon {
+            font-size: 32px;
+            margin-left: 16px;
+        }
+
+        .payment-actions {
+            padding: 24px 32px;
+            background: var(--bg-gray);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .payment-total {
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+
+        .payment-total strong {
+            font-size: 24px;
+            color: var(--text-dark);
+        }
+
+        .btn-payment {
+            background: var(--primary);
+            color: white;
+            padding: 16px 48px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-payment:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-payment:disabled {
+            background: var(--text-gray);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .payment-note {
+            padding: 20px 32px;
+            background: var(--bg-light);
+            font-size: 14px;
+            color: var(--text-gray);
+            border-top: 1px solid var(--border);
+        }
+
+        .payment-note ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .payment-note li {
+            margin-bottom: 4px;
+        }
+
+        .success-animation {
+            text-align: center;
+            padding: 60px 32px;
+        }
+
+        .success-icon {
+            width: 100px;
+            height: 100px;
+            background: var(--success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 48px;
+            color: white;
+            animation: pop 0.5s ease;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .success-animation h2 {
+            font-size: 28px;
+            margin-bottom: 12px;
+            color: var(--success);
+        }
+
+        .success-animation p {
+            color: var(--text-gray);
+            margin-bottom: 24px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 40px auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/" class="navbar-brand">
+                <div class="logo">P</div>
+                <div class="brand-name">Phương <span>Anh</span> TTS</div>
+            </a>
+            
+            <div class="navbar-menu">
+                <a href="/">Trang chủ</a>
+                <a href="/about">Giới thiệu</a>
+                <a href="/pricing" class="active">Bảng giá</a>
+                <a href="/finance">Tài chính</a>
+                <a href="/tts">TTS</a>
+            </div>
+            
+            <div class="navbar-actions" id="navbar-actions">
+                <a href="/login" class="btn btn-outline">Đăng nhập</a>
+                <a href="/register" class="btn btn-primary">Đăng ký</a>
+            </div>
+            
+            <div class="menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="payment-container">
+        <!-- Loading State -->
+        <div id="loading-state">
+            <div class="payment-card">
+                <div class="spinner"></div>
+                <p style="text-align: center; color: var(--text-gray);">Đang tải...</p>
+            </div>
+        </div>
+
+        <!-- Payment Form -->
+        <div id="payment-form" style="display: none;">
+            <div class="payment-header">
+                <h1>Thanh toán <span>nâng cấp gói</span></h1>
+                <p>Hoàn tất thanh toán để kích hoạt gói dịch vụ của bạn</p>
+            </div>
+
+            <div class="payment-card">
+                <div class="plan-summary">
+                    <div class="plan-info">
+                        <h3 id="plan-name">Gói Basic</h3>
+                        <p id="plan-features">100 audio/ngày • 100,000 ký tự/tháng</p>
+                    </div>
+                    <div class="plan-price">
+                        <div class="amount" id="plan-price">199,000đ</div>
+                        <div class="period">/tháng</div>
+                    </div>
+                </div>
+
+                <div class="payment-methods">
+                    <h3>Chọn phương thức thanh toán</h3>
+
+                    <label class="payment-method selected">
+                        <input type="radio" name="method" value="vnpay" checked>
+                        <div class="method-info">
+                            <h4>VNPay</h4>
+                            <p>Thanh toán qua VNPay, hỗ trợ nhiều ngân hàng</p>
+                        </div>
+                        <div class="method-icon">🏦</div>
+                    </label>
+
+                    <label class="payment-method">
+                        <input type="radio" name="method" value="momo">
+                        <div class="method-info">
+                            <h4>MoMo</h4>
+                            <p>Thanh toán qua ví MoMo</p>
+                        </div>
+                        <div class="method-icon">📱</div>
+                    </label>
+
+                    <label class="payment-method">
+                        <input type="radio" name="method" value="banking">
+                        <div class="method-info">
+                            <h4>Chuyển khoản ngân hàng</h4>
+                            <p>Chuyển khoản trực tiếp vào tài khoản công ty</p>
+                        </div>
+                        <div class="method-icon">🏛️</div>
+                    </label>
+
+                    <label class="payment-method">
+                        <input type="radio" name="method" value="cash">
+                        <div class="method-info">
+                            <h4>Tiền mặt</h4>
+                            <p>Thanh toán trực tiếp tại văn phòng</p>
+                        </div>
+                        <div class="method-icon">💵</div>
+                    </label>
+                </div>
+
+                <div class="payment-note">
+                    <strong>Lưu ý:</strong>
+                    <ul>
+                        <li>Đơn hàng sẽ được xử lý trong 24h sau khi thanh toán</li>
+                        <li>Admin sẽ xác nhận và kích hoạt gói dịch vụ cho bạn</li>
+                        <li>Bạn sẽ nhận thông báo khi gói được kích hoạt</li>
+                    </ul>
+                </div>
+
+                <div class="payment-actions">
+                    <div class="payment-total">
+                        Tổng thanh toán:<br>
+                        <strong id="total-amount">199,000đ</strong>
+                    </div>
+                    <button class="btn-payment" id="btn-pay" onclick="processPayment()">
+                        Thanh toán ngay
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success State -->
+        <div id="success-state" style="display: none;">
+            <div class="payment-card">
+                <div class="success-animation">
+                    <div class="success-icon">✓</div>
+                    <h2 id="success-title">Đặt hàng thành công!</h2>
+                    <p id="success-message">Yêu cầu nâng cấp của bạn đã được gửi.<br>Admin sẽ xác nhận trong 24h.</p>
+                    <a href="/profile" class="btn btn-primary" style="display: inline-block; padding: 12px 32px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px;">
+                        Xem trạng thái đơn hàng
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" style="display: none;">
+            <div class="payment-card">
+                <div class="success-animation">
+                    <div class="success-icon" style="background: var(--danger);">✕</div>
+                    <h2>Có lỗi xảy ra!</h2>
+                    <p id="error-message">Không thể xử lý thanh toán. Vui lòng thử lại.</p>
+                    <button class="btn btn-outline" onclick="location.reload()" style="padding: 12px 32px; border: 2px solid var(--primary); color: var(--primary); background: transparent; border-radius: 8px; cursor: pointer;">
+                        Thử lại
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        let selectedPlan = null;
+        let selectedMethod = 'vnpay';
+
+        const PLAN_INFO = {
+            'basic': { name: 'Gói Basic', price: 199000, priceDisplay: '199,000đ', features: '100 audio/ngày • 100,000 ký tự/tháng' },
+            'pro': { name: 'Gói Pro', price: 499000, priceDisplay: '499,000đ', features: 'Audio không giới hạn • 500,000 ký tự/tháng' },
+            'enterprise': { name: 'Gói Enterprise', price: 0, priceDisplay: 'Liên hệ', features: 'Không giới hạn • Custom Voice Cloning' }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            loadPaymentInfo();
+            setupPaymentMethods();
+        });
+
+        function checkAuth() {
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            const token = localStorage.getItem('auth_token');
+
+            if (!user || !token) {
+                location.href = '/login?redirect=/payment';
+                return;
+            }
+
+            // Update navbar
+            document.getElementById('navbar-actions').innerHTML = `
+                <span style="font-size: 14px; color: var(--text-gray);">Xin chào, ${user.username || user.email}</span>
+                <a href="/profile" class="btn btn-outline" style="border-color: var(--primary); color: var(--primary);">Hồ sơ</a>
+                <button class="btn btn-outline" onclick="logout()">Đăng xuất</button>
+            `;
+        }
+
+        function loadPaymentInfo() {
+            const params = new URLSearchParams(location.search);
+            selectedPlan = params.get('plan') || 'basic';
+
+            if (!PLAN_INFO[selectedPlan]) {
+                showError('Gói không hợp lệ');
+                return;
+            }
+
+            const plan = PLAN_INFO[selectedPlan];
+            document.getElementById('plan-name').textContent = plan.name;
+            document.getElementById('plan-price').textContent = plan.priceDisplay;
+            document.getElementById('total-amount').textContent = plan.priceDisplay;
+            document.getElementById('plan-features').textContent = plan.features;
+
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('payment-form').style.display = 'block';
+        }
+
+        function setupPaymentMethods() {
+            document.querySelectorAll('.payment-method').forEach(method => {
+                method.addEventListener('click', () => {
+                    document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
+                    method.classList.add('selected');
+                    selectedMethod = method.querySelector('input').value;
+                });
+            });
+        }
+
+        async function processPayment() {
+            const btn = document.getElementById('btn-pay');
+            btn.disabled = true;
+            btn.textContent = 'Đang xử lý...';
+
+            const token = localStorage.getItem('auth_token');
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+
+            // Check if logged in
+            if (!user || !token) {
+                location.href = '/login?redirect=/payment?plan=' + selectedPlan;
+                return;
+            }
+
+            try {
+                // Call payment API
+                const res = await fetch(`${API_BASE}/payment/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        plan: selectedPlan,
+                        method: selectedMethod
+                    })
+                });
+
+                // Handle unauthorized - token expired
+                if (res.status === 401) {
+                    alert('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+                    location.href = '/login?redirect=/payment?plan=' + selectedPlan;
+                    return;
+                }
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Thanh toán thất bại');
+                }
+
+                const data = await res.json();
+
+                // For banking: show waiting message and start polling
+                if (selectedMethod === 'banking') {
+                    document.getElementById('payment-form').style.display = 'none';
+                    document.getElementById('success-state').style.display = 'block';
+                    document.getElementById('success-title').textContent = 'Đang chờ xác nhận!';
+                    document.getElementById('success-message').innerHTML = `
+                        <div style="text-align: center;">
+                            <p style="font-size: 18px; margin-bottom: 20px;">Mã đơn hàng: <strong>${data.order_id}</strong></p>
+                            <p style="color: #666; margin-bottom: 20px;">Vui lòng chuyển khoản theo thông tin bên dưới và chờ Admin xác nhận trong 24h.</p>
+                            <p style="color: var(--primary); font-weight: 600;">Trang sẽ tự động cập nhật khi Admin xác nhận thanh toán.</p>
+                            <p style="color: #999; font-size: 12px; margin-top: 10px;">Đang kiểm tra...</p>
+                        </div>
+                    `;
+                    // Start polling for admin confirmation
+                    startPaymentPolling();
+                    return;
+                }
+
+                // Mock: auto confirm payment success (in real app, would redirect to payment gateway)
+                if (selectedMethod === 'vnpay' || selectedMethod === 'momo') {
+                    // Simulate payment gateway callback
+                    await fetch(`${API_BASE}/payment/callback`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            order_id: data.order_id,
+                            status: 'success'
+                        })
+                    });
+                }
+
+                showSuccess();
+
+            } catch (e) {
+                showError(e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Thanh toán ngay';
+            }
+        }
+
+        function showSuccess() {
+            document.getElementById('payment-form').style.display = 'none';
+            document.getElementById('success-state').style.display = 'block';
+        }
+
+        // Check payment status periodically (for admin confirmation)
+        async function checkPaymentStatus() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const res = await fetch(`${API_BASE}/payment/orders`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    // Find pending payment and check if any became completed
+                    const pendingPayment = data.orders?.find(o => o.status === 'completed');
+                    if (pendingPayment) {
+                        // Update local storage with new subscription
+                        const user = JSON.parse(localStorage.getItem('user') || '{}');
+                        user.subscription_plan = pendingPayment.plan;
+                        localStorage.setItem('user', JSON.stringify(user));
+                        
+                        // Show success
+                        document.getElementById('success-title').textContent = 'Thanh toán thành công!';
+                        document.getElementById('success-message').innerHTML = `
+                            <div style="text-align: center;">
+                                <p style="font-size: 24px; color: var(--primary); margin-bottom: 20px;">🎉</p>
+                                <p style="font-size: 18px; margin-bottom: 10px;">Admin đã xác nhận thanh toán!</p>
+                                <p style="color: #666;">Gói ${pendingPayment.plan} đã được kích hoạt.</p>
+                                <a href="/tts" class="btn btn-primary" style="display: inline-block; margin-top: 20px; padding: 12px 32px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px;">
+                                    Bắt đầu sử dụng ngay
+                                </a>
+                            </div>
+                        `;
+                        return true;
+                    }
+                }
+            } catch (e) {
+                console.log('Check status error:', e);
+            }
+            return false;
+        }
+
+        // Poll for payment confirmation every 5 seconds
+        let paymentPollInterval;
+        function startPaymentPolling() {
+            // Clear any existing interval
+            if (paymentPollInterval) clearInterval(paymentPollInterval);
+            
+            paymentPollInterval = setInterval(async () => {
+                const confirmed = await checkPaymentStatus();
+                if (confirmed) {
+                    clearInterval(paymentPollInterval);
+                }
+            }, 5000);
+        }
+
+        function showError(message) {
+            document.getElementById('payment-form').style.display = 'none';
+            document.getElementById('error-state').style.display = 'block';
+            document.getElementById('error-message').textContent = message;
+        }
+
+        function logout() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+            location.href = '/login';
+        }
+    </script>
+</body>
+</html>
