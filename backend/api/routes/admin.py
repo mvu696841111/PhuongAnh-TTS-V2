@@ -4,7 +4,7 @@ Handles user management, account management, and finance analytics.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException, Query, Depends, Header
@@ -13,11 +13,27 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from core.database import get_database
 from core.config import get_settings
-from services.auth_service import AuthService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+# Vietnam timezone
+VIETNAM_TZ = timezone(timedelta(hours=7))
+
+
+def now_vietnam() -> datetime:
+    """Get current datetime in Vietnam timezone (UTC+7)."""
+    return datetime.now(VIETNAM_TZ)
+
+
+def to_vietnam(dt: datetime) -> datetime:
+    """Convert a datetime to Vietnam timezone."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc).astimezone(VIETNAM_TZ)
+    return dt.astimezone(VIETNAM_TZ)
 
 
 def get_db():
@@ -113,33 +129,38 @@ async def get_dashboard_stats(
     """Get dashboard statistics."""
     try:
         settings = get_settings()
-        
+
         # User stats
         total_users = await db.users.count_documents({})
         verified_users = await db.users.count_documents({"is_verified": True})
-        
-        # Subscription stats
+
+        # Subscription stats - use unified plan names
         free_users = await db.users.count_documents({"subscription_plan": "free"})
-        paid_users = await db.users.count_documents({"subscription_plan": {"$in": ["basic", "pro", "enterprise"]}})
-        
-        # This month
-        first_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        new_users_this_month = await db.users.count_documents({"created_at": {"$gte": first_of_month}})
-        
+        # CRITICAL FIX: Use plus/pro (not basic) for correct revenue calculation
+        plus_users = await db.users.count_documents({"subscription_plan": "plus"})
+        pro_users = await db.users.count_documents({"subscription_plan": "pro"})
+
+        # This month (using Vietnam timezone)
+        first_of_month = now_vietnam().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        first_of_month_utc = first_of_month.astimezone(timezone.utc)
+        new_users_this_month = await db.users.count_documents({"created_at": {"$gte": first_of_month_utc}})
+
         # Active sessions
         active_sessions = await db.sessions.count_documents({
             "is_revoked": False,
-            "expires_at": {"$gt": datetime.utcnow()}
+            "expires_at": {"$gt": now_vietnam()}
         })
-        
+
         # Usage logs this month
-        usage_this_month = await db.usage_logs.count_documents({"timestamp": {"$gte": first_of_month}})
-        
+        usage_this_month = await db.usage_logs.count_documents({"timestamp": {"$gte": first_of_month_utc}})
+
         return {
             "total_users": total_users,
             "verified_users": verified_users,
             "free_users": free_users,
-            "paid_users": paid_users,
+            "plus_users": plus_users,
+            "pro_users": pro_users,
+            "paid_users": plus_users + pro_users,
             "new_users_this_month": new_users_this_month,
             "active_sessions": active_sessions,
             "usage_this_month": usage_this_month,
@@ -263,23 +284,23 @@ async def update_user(
 ):
     """Update user subscription plan or status."""
     try:
-        update_data = {"updated_at": datetime.utcnow()}
-        
+        update_data = {"updated_at": now_vietnam()}
+
         if plan:
             update_data["subscription_plan"] = plan
         if status:
             update_data["subscription_status"] = status
         if role:
             update_data["role"] = role
-        
+
         result = await db.users.update_one(
             {"_id": ObjectId(user_id)},
             {"$set": update_data}
         )
-        
+
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="User not found")
-        
+
         return {"message": "User updated successfully"}
     except HTTPException:
         raise
@@ -373,10 +394,10 @@ async def approve_subscription(
     db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: dict = Depends(get_current_admin_user)
 ):
-    """Approve a subscription and update user plan."""
+    """
+    Approve a subscription and update user plan with proper expiration handling.
+    """
     try:
-        from datetime import timedelta
-
         sub = await db.subscriptions.find_one({"_id": ObjectId(subscription_id)})
         if not sub:
             raise HTTPException(status_code=404, detail="Subscription not found")
@@ -385,15 +406,25 @@ async def approve_subscription(
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        new_plan = sub.get("plan", "basic")
-        expires_at = datetime.utcnow() + timedelta(days=30)
+        now = now_vietnam()
+        new_plan = sub.get("plan", "plus")
+
+        # Check if user has existing active subscription to extend
+        current_expires = user.get("subscription_expires_at")
+        current_expires_vn = to_vietnam(current_expires) if current_expires else None
+
+        # If current subscription is still valid, extend from current expiration
+        if current_expires_vn and current_expires_vn > now:
+            expires_at = current_expires_vn + timedelta(days=30)
+        else:
+            expires_at = now + timedelta(days=30)
 
         # Update subscription status
         await db.subscriptions.update_one(
             {"_id": ObjectId(subscription_id)},
             {"$set": {
                 "status": "active",
-                "approved_at": datetime.utcnow(),
+                "approved_at": now,
                 "approved_by": str(current_user["_id"]),
                 "expires_at": expires_at
             }}
@@ -405,13 +436,14 @@ async def approve_subscription(
             {"$set": {
                 "subscription_plan": new_plan,
                 "subscription_status": "active",
-                "updated_at": datetime.utcnow()
+                "subscription_expires_at": expires_at,
+                "updated_at": now
             }}
         )
 
         logger.info(f"✓ Subscription {subscription_id} approved - user {user['email']} upgraded to {new_plan}")
 
-        return {"message": f"Subscription approved. User upgraded to {new_plan}"}
+        return {"message": f"Subscription approved. User upgraded to {new_plan}", "expires_at": str(expires_at)}
     except HTTPException:
         raise
     except Exception as e:
@@ -422,6 +454,7 @@ async def approve_subscription(
 @router.post("/subscriptions/{subscription_id}/reject")
 async def reject_subscription(
     subscription_id: str,
+    reason: Optional[str] = None,
     db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: dict = Depends(get_current_admin_user)
 ):
@@ -431,8 +464,9 @@ async def reject_subscription(
             {"_id": ObjectId(subscription_id)},
             {"$set": {
                 "status": "rejected",
-                "rejected_at": datetime.utcnow(),
-                "rejected_by": str(current_user["_id"])
+                "rejected_at": now_vietnam(),
+                "rejected_by": str(current_user["_id"]),
+                "reject_reason": reason or "Không có lý do"
             }}
         )
 
@@ -451,24 +485,35 @@ async def admin_set_user_plan(
     db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: dict = Depends(get_current_admin_user)
 ):
-    """Admin directly set user subscription plan."""
+    """
+    Admin directly set user subscription plan with proper expiration.
+    """
     try:
-        from datetime import timedelta
-
-        valid_plans = ["free", "basic", "pro", "enterprise"]
+        # CRITICAL FIX: Use unified plan names (free/plus/pro, not basic/enterprise)
+        valid_plans = ["free", "plus", "pro"]
         if plan not in valid_plans:
             raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {valid_plans}")
 
+        now = now_vietnam()
         expires_at = None
         if plan != "free":
-            expires_at = datetime.utcnow() + timedelta(days=30)
+            # Check current expiration to extend properly
+            user = await db.users.find_one({"_id": ObjectId(user_id)})
+            current_expires = user.get("subscription_expires_at") if user else None
+            current_expires_vn = to_vietnam(current_expires) if current_expires else None
+
+            if current_expires_vn and current_expires_vn > now:
+                expires_at = current_expires_vn + timedelta(days=30)
+            else:
+                expires_at = now + timedelta(days=30)
 
         result = await db.users.update_one(
             {"_id": ObjectId(user_id)},
             {"$set": {
                 "subscription_plan": plan,
                 "subscription_status": "active",
-                "updated_at": datetime.utcnow()
+                "subscription_expires_at": expires_at,
+                "updated_at": now
             }}
         )
 
@@ -479,7 +524,7 @@ async def admin_set_user_plan(
         await db.usage_logs.insert_one({
             "user_id": ObjectId(user_id),
             "action": "admin_set_plan",
-            "timestamp": datetime.utcnow(),
+            "timestamp": now,
             "metadata": {
                 "new_plan": plan,
                 "admin_id": str(current_user["_id"]),
@@ -487,7 +532,7 @@ async def admin_set_user_plan(
             }
         })
 
-        return {"message": f"User plan updated to {plan}"}
+        return {"message": f"User plan updated to {plan}", "expires_at": str(expires_at) if expires_at else None}
     except HTTPException:
         raise
     except Exception as e:
@@ -501,40 +546,78 @@ async def get_finance_stats(
     db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: dict = Depends(get_current_admin_user)
 ):
-    """Get finance statistics."""
+    """
+    Get finance statistics with CORRECT revenue calculation.
+    
+    CRITICAL: Revenue is calculated from ACTUAL payment records, not user counts.
+    This fixes the bug where basic_users * 199000 was wrong.
+    """
     try:
-        now = datetime.utcnow()
+        now = now_vietnam()
+        now_utc = now.astimezone(timezone.utc)
         first_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        
-        # User counts by plan
+        first_of_month_utc = first_of_month.astimezone(timezone.utc)
+
+        # User counts by plan - use unified plan names
         free_users = await db.users.count_documents({"subscription_plan": "free"})
-        basic_users = await db.users.count_documents({"subscription_plan": "basic"})
+        plus_users = await db.users.count_documents({"subscription_plan": "plus"})
         pro_users = await db.users.count_documents({"subscription_plan": "pro"})
-        enterprise_users = await db.users.count_documents({"subscription_plan": "enterprise"})
-        
+
         # New users this month
         new_users_this_month = await db.users.count_documents(
-            {"created_at": {"$gte": first_of_month}}
+            {"created_at": {"$gte": first_of_month_utc}}
         )
-        
-        # Active subscriptions
-        active_subscriptions = await db.subscriptions.count_documents(
-            {"status": "active", "$or": [{"expires_at": None}, {"expires_at": {"$gt": now}}]}
-        )
-        
-        # Calculate mock revenue
-        revenue = {
-            "basic": basic_users * 199000,
-            "pro": pro_users * 499000,
-            "enterprise": enterprise_users * 0,  # Custom pricing
-        }
-        
+
+        # Active subscriptions - check expiration properly
+        active_subscriptions = await db.subscriptions.count_documents({
+            "status": "active",
+            "expires_at": {"$gt": now_utc}
+        })
+
+        # CRITICAL FIX: Calculate revenue from ACTUAL completed payments
+        # Not user_count * price (which is WRONG - duplicates users)
+        # Get actual payment amounts from payment records
+
+        pipeline_payments = [
+            {
+                "$match": {
+                    "status": "completed",
+                    "created_at": {"$gte": first_of_month_utc}
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$plan",
+                    "total_amount": {"$sum": "$amount"},
+                    "count": {"$sum": 1}
+                }
+            }
+        ]
+        payment_summary = await db.payments.aggregate(pipeline_payments).to_list(length=None)
+
+        # Build revenue from actual payments
+        revenue_by_plan = {"free": 0, "plus": 0, "pro": 0}
+        for p in payment_summary:
+            plan = p["_id"]
+            if plan in revenue_by_plan:
+                revenue_by_plan[plan] = p["total_amount"]
+
+        total_revenue = sum(revenue_by_plan.values())
+
+        # Count users who actually paid (from payment records)
+        pipeline_paid_users = [
+            {"$group": {"_id": "$user_id"}},
+            {"$count": "total"}
+        ]
+        paid_user_count_result = await db.payments.aggregate(pipeline_paid_users).to_list(length=None)
+        actual_paid_users = paid_user_count_result[0]["total"] if paid_user_count_result else 0
+
         return FinanceStats(
-            total_revenue=sum(revenue.values()),
+            total_revenue=total_revenue,
             active_subscriptions=active_subscriptions,
             free_users=free_users,
-            paid_users=basic_users + pro_users + enterprise_users,
-            revenue_by_plan=revenue,
+            paid_users=actual_paid_users,
+            revenue_by_plan=revenue_by_plan,
             new_users_this_month=new_users_this_month,
             churned_users_this_month=0,
         )
@@ -551,23 +634,34 @@ async def get_revenue_history(
 ):
     """Get revenue history by day."""
     try:
-        now = datetime.utcnow()
+        now = now_vietnam()
         start_date = now - timedelta(days=days)
-        
-        # Aggregate user registrations by day
+        start_date_utc = start_date.astimezone(timezone.utc)
+
+        # Aggregate actual payment amounts by day
         pipeline = [
-            {"$match": {"created_at": {"$gte": start_date}}},
-            {"$group": {
-                "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}},
-                "count": {"$sum": 1},
-                "free": {"$sum": {"$cond": [{"$eq": ["$subscription_plan", "free"]}, 1, 0]}},
-                "paid": {"$sum": {"$cond": [{"$ne": ["$subscription_plan", "free"]}, 1, 0]}},
-            }},
+            {
+                "$match": {
+                    "status": "completed",
+                    "created_at": {"$gte": start_date_utc}
+                }
+            },
+            {
+                "$group": {
+                    "_id": {
+                        "$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}
+                    },
+                    "total_amount": {"$sum": "$amount"},
+                    "count": {"$sum": 1},
+                    "free": {"$sum": {"$cond": [{"$eq": ["$plan", "free"]}, 1, 0]}},
+                    "paid": {"$sum": {"$cond": [{"$ne": ["$plan", "free"]}, 1, 0]}},
+                }
+            },
             {"$sort": {"_id": 1}},
         ]
-        
-        history = await db.users.aggregate(pipeline).to_list(length=days)
-        
+
+        history = await db.payments.aggregate(pipeline).to_list(length=days)
+
         return {"history": history, "days": days}
     except Exception as e:
         logger.error(f"Revenue history error: {e}")
@@ -631,7 +725,7 @@ async def approve_payment(
     db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: dict = Depends(get_current_admin_user)
 ):
-    """Approve payment and activate subscription."""
+    """Approve payment and activate subscription with proper expiration."""
     try:
         from datetime import timedelta
 
@@ -640,14 +734,26 @@ async def approve_payment(
             raise HTTPException(status_code=404, detail="Payment not found")
 
         user_id = payment["user_id"]
-        new_plan = payment.get("plan", "basic")
+        new_plan = payment.get("plan", "plus")
+
+        # Check if user has existing active subscription
+        user = await db.users.find_one({"_id": user_id})
+        current_expires = user.get("subscription_expires_at")
+        current_expires_vn = to_vietnam(current_expires) if current_expires else None
+        now = now_vietnam()
+
+        # Calculate expiration - extend from current if still valid, otherwise start fresh
+        if current_expires_vn and current_expires_vn > now:
+            expires_at = current_expires_vn + timedelta(days=30)
+        else:
+            expires_at = now + timedelta(days=30)
 
         # Update payment status
         await db.payments.update_one(
             {"order_id": order_id},
             {"$set": {
                 "status": "approved",
-                "approved_at": datetime.utcnow(),
+                "approved_at": now_vietnam(),
                 "approved_by": str(current_user["_id"])
             }}
         )
@@ -657,26 +763,27 @@ async def approve_payment(
             {"order_id": order_id},
             {"$set": {
                 "status": "active",
-                "approved_at": datetime.utcnow(),
+                "approved_at": now_vietnam(),
                 "approved_by": str(current_user["_id"]),
-                "expires_at": datetime.utcnow() + timedelta(days=30)
+                "expires_at": expires_at
             }}
         )
 
-        # Update user plan
+        # Update user plan WITH expiration
         await db.users.update_one(
             {"_id": user_id},
             {"$set": {
                 "subscription_plan": new_plan,
                 "subscription_status": "active",
-                "updated_at": datetime.utcnow()
+                "subscription_expires_at": expires_at,
+                "subscription_started_at": current_expires_vn if current_expires_vn and current_expires_vn > now else now_vietnam(),
+                "updated_at": now_vietnam()
             }}
         )
 
-        user = await db.users.find_one({"_id": user_id})
-        logger.info(f"✓ Payment {order_id} approved - {user['email']} upgraded to {new_plan}")
+        logger.info(f"✓ Payment {order_id} approved - {user['email']} upgraded to {new_plan}, expires: {expires_at}")
 
-        return {"message": f"Thanh toán đã được duyệt. User lên gói {new_plan}"}
+        return {"message": f"Thanh toán đã được duyệt. User lên gói {new_plan}", "expires_at": str(expires_at)}
     except HTTPException:
         raise
     except Exception as e:
@@ -729,35 +836,39 @@ async def get_usage_logs(
 ):
     """Get usage logs with filters."""
     try:
-        now = datetime.utcnow()
+        now = now_vietnam()
         start_date = now - timedelta(days=days)
-        
-        query = {"timestamp": {"$gte": start_date}}
-        
+        start_date_utc = start_date.astimezone(timezone.utc)
+
+        query = {"timestamp": {"$gte": start_date_utc}}
+
         if user_id:
             query["user_id"] = ObjectId(user_id)
-        
+
         if action:
             query["action"] = action
-        
+
         skip = (page - 1) * page_size
-        
+
         total = await db.usage_logs.count_documents(query)
         cursor = db.usage_logs.find(query).sort("timestamp", -1).skip(skip).limit(page_size)
         logs = await cursor.to_list(length=page_size)
-        
+
         # Enrich with user email
         enriched_logs = []
         for log in logs:
             user = await db.users.find_one({"_id": log.get("user_id")})
+            # Convert timestamp to Vietnam timezone for display
+            timestamp_vn = to_vietnam(log.get("timestamp"))
             enriched_logs.append({
                 "id": str(log["_id"]),
                 "user_email": user["email"] if user else "Unknown",
                 "action": log.get("action", ""),
-                "timestamp": str(log.get("timestamp", "")),
+                "timestamp": str(timestamp_vn) if timestamp_vn else "",
+                "timestamp_vietnam": timestamp_vn.isoformat() if timestamp_vn else None,
                 "metadata": log.get("metadata", {}),
             })
-        
+
         return {
             "logs": enriched_logs,
             "total": total,

@@ -5,7 +5,7 @@ Handles user registration, login, logout, and token management.
 
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from models.schemas.user import (
@@ -99,30 +99,37 @@ async def register(
 )
 async def login(
     credentials: UserLogin,
+    request: Request,
     db: AsyncIOMotorDatabase = Depends(get_db),
     auth_service: AuthService = Depends(get_auth_service)
 ):
     """
     Login with email and password.
-    
+
     Returns:
     - **access_token**: JWT access token (expires in 30 minutes)
     - **refresh_token**: Refresh token (valid for 7 days)
     - **token_type**: Always "bearer"
-    - **user**: User information
+    - **user**: User information including role
     """
+    # Extract client info
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+
     user, error = await auth_service.authenticate_user(
         email=credentials.email,
-        password=credentials.password
+        password=credentials.password,
+        ip_address=client_ip,
+        user_agent=user_agent
     )
-    
+
     if error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=error,
             headers={"WWW-Authenticate": "Bearer"}
         )
-    
+
     # Create response with tokens
     response_data = {
         "access_token": user["access_token"],
@@ -136,9 +143,9 @@ async def login(
             "subscription_plan": user["subscription_plan"]
         }
     }
-    
-    logger.info(f"User logged in: {credentials.email}")
-    
+
+    logger.info(f"User logged in: {credentials.email} (role: {user.get('role', 'user')})")
+
     return response_data
 
 

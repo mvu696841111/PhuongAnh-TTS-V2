@@ -1203,7 +1203,8 @@
         }
 
         function getPlanBadge(plan) {
-            const badges = { free: 'info', basic: 'success', pro: 'warning', enterprise: 'danger' };
+            // CRITICAL FIX: Use unified plan names (free/plus/pro)
+            const badges = { free: 'info', plus: 'success', pro: 'warning' };
             return badges[plan] || 'info';
         }
 
@@ -1234,9 +1235,10 @@
         }
 
         async function editUser(id) {
-            const plan = prompt('Nhập gói mới (free, basic, pro, enterprise):');
+            // CRITICAL FIX: Use unified plan names (free/plus/pro)
+            const plan = prompt('Nhập gói mới (free, plus, pro):');
             if (!plan) return;
-            
+
             const res = await api(`/users/${id}?plan=${plan}`, { method: 'PUT' });
             if (res) {
                 alert('Đã cập nhật!');

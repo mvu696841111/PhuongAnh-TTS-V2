@@ -7,7 +7,7 @@ import os
 import logging
 import uuid
 import aiofiles
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Tuple
 from pathlib import Path
 from bson import ObjectId
@@ -17,6 +17,14 @@ from core.config import get_settings, get_subscription_limits
 from core.database import get_database
 
 logger = logging.getLogger(__name__)
+
+# Vietnam timezone for consistent time handling
+VIETNAM_TZ = timezone(timedelta(hours=7))
+
+
+def now_vietnam() -> datetime:
+    """Get current datetime in Vietnam timezone (UTC+7)."""
+    return datetime.now(VIETNAM_TZ)
 
 
 class AudioService:
@@ -94,7 +102,7 @@ class AudioService:
             filesize = len(audio_data)
             
             # Create database record
-            now = datetime.utcnow()
+            now = now_vietnam()
             audio_doc = {
                 "user_id": ObjectId(user_id),
                 "filename": filename,
@@ -270,11 +278,11 @@ class AudioService:
     ) -> Tuple[bool, Optional[str]]:
         """
         Check if user can generate audio based on usage limits.
-        
+
         Args:
             user_id: User ID
             text_length: Length of text to generate
-            
+
         Returns:
             Tuple of (can_generate, error_message)
         """
@@ -282,44 +290,46 @@ class AudioService:
             # Get user plan
             user = await self.db.users.find_one({"_id": ObjectId(user_id)})
             plan = user.get("subscription_plan", "free") if user else "free"
-            
+
             # Get limits
             limits = self.limits
-            
+
             # Check text length limit
             max_text_length = limits.get_max_text_length(plan)
             if text_length > max_text_length:
                 return False, f"Text too long. Maximum is {max_text_length} characters for {plan} plan."
-            
-            # Check daily audio limit
+
+            # Check daily audio limit (using Vietnam timezone)
             daily_limit = limits.get_daily_audio_limit(plan)
             if daily_limit > 0:
-                today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+                today = now_vietnam().replace(hour=0, minute=0, second=0, microsecond=0)
+                today_utc = today.astimezone(timezone.utc)
                 today_count = await self.audio_files.count_documents({
                     "user_id": ObjectId(user_id),
-                    "created_at": {"$gte": today}
+                    "created_at": {"$gte": today_utc}
                 })
-                
+
                 if today_count >= daily_limit:
                     return False, f"Daily audio limit reached ({daily_limit}). Upgrade your plan for more."
-            
+
             # Check monthly character limit
-            month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            month_start = now_vietnam().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            month_start_utc = month_start.astimezone(timezone.utc)
             monthly_logs = await self.usage_logs.find({
                 "user_id": ObjectId(user_id),
                 "action": "tts_generate",
-                "timestamp": {"$gte": month_start}
+                "timestamp": {"$gte": month_start_utc}
             }).to_list(length=None)
-            
+
             monthly_chars = sum(log.get("characters_used", 0) for log in monthly_logs)
             monthly_limit = limits.get_monthly_chars_limit(plan)
-            
+
             if monthly_chars + text_length > monthly_limit:
                 remaining = max(0, monthly_limit - monthly_chars)
                 return False, f"Monthly character limit reached. You have {remaining} characters remaining."
-            
+
             return True, None
-            
+
         except Exception as e:
             logger.error(f"Check usage limits error: {e}")
             return False, "Failed to check usage limits"
@@ -331,10 +341,10 @@ class AudioService:
     async def cleanup_temp_files(self, max_age_hours: int = 24) -> int:
         """
         Clean up old temporary files.
-        
+
         Args:
             max_age_hours: Maximum age in hours before deletion
-            
+
         Returns:
             Number of files deleted
         """
@@ -342,23 +352,23 @@ class AudioService:
             temp_path = Path(self.settings.TEMP_STORAGE_PATH)
             if not temp_path.exists():
                 return 0
-            
+
             deleted = 0
             max_age_seconds = max_age_hours * 3600
-            now = datetime.utcnow().timestamp()
-            
+            now = now_vietnam().timestamp()
+
             for file in temp_path.rglob("*"):
                 if file.is_file():
                     file_age = now - file.stat().st_mtime
                     if file_age > max_age_seconds:
                         file.unlink()
                         deleted += 1
-            
+
             if deleted > 0:
                 logger.info(f"✓ Cleaned up {deleted} temp files")
-            
+
             return deleted
-            
+
         except Exception as e:
             logger.error(f"Cleanup temp files error: {e}")
             return 0

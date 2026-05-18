@@ -272,7 +272,7 @@ class BasePhuongAnhTTS(ABC):
                 except ImportError:
                     codes = np.array(codes, dtype=np.int64)
 
-        return {"codes": codes, "text": voice_data["text"]}
+        return {"id": voice_name, "codes": codes, "text": voice_data["text"]}
 
     def get_ref_phonemes(self, ref_text: str) -> str:
         """

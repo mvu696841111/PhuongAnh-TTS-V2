@@ -230,7 +230,7 @@ def _model_card_html(state_snapshot) -> str:
 # ── Authentication Handlers ───────────────────────────────────────
 
 def handle_login(email: str, password: str):
-    """Handle user login."""
+    """Handle user login with role support."""
     try:
         if not email or not email.strip():
             yield (
@@ -252,7 +252,10 @@ def handle_login(email: str, password: str):
 
         user = _auth_service.login(email.strip(), password)
 
-        # Update UI state
+        # Get role from user object
+        user_role = getattr(user, 'role', 'user')
+
+        # Update UI state with role support
         from phuonganh_app.ui_state import UserInfo
         get_ui_state().set_user(UserInfo(
             id=user.id,
@@ -260,14 +263,24 @@ def handle_login(email: str, password: str):
             username=user.username,
             subscription_plan=user.subscription_plan,
             is_verified=user.is_verified,
+            role=user_role,
         ))
 
-        yield (
-            f"✅ Đăng nhập thành công!",
-            gr.update(visible=False),
-            gr.update(visible=True),
-            gr.update(visible=True),
-        )
+        # Check if admin - show different message
+        if user_role == 'admin':
+            yield (
+                "✅ Đăng nhập Admin thành công! Chuyển hướng đến Dashboard...",
+                gr.update(visible=False),
+                gr.update(visible=True),
+                gr.update(visible=True),
+            )
+        else:
+            yield (
+                f"✅ Đăng nhập thành công!",
+                gr.update(visible=False),
+                gr.update(visible=True),
+                gr.update(visible=True),
+            )
 
     except Exception as e:
         error_msg = str(e)

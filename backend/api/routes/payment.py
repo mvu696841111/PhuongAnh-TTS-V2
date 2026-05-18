@@ -5,7 +5,7 @@ Handles payment processing and order management.
 
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, Header, Query
 from pydantic import BaseModel
@@ -18,6 +18,24 @@ from core.config import get_settings
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/payment", tags=["payment"])
+
+# Vietnam timezone
+VIETNAM_TZ = timezone(timedelta(hours=7))
+
+
+def now_vietnam() -> datetime:
+    """Get current datetime in Vietnam timezone (UTC+7)."""
+    return datetime.now(VIETNAM_TZ)
+
+
+def to_vietnam(dt: datetime) -> datetime:
+    """Convert a datetime to Vietnam timezone."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc).astimezone(VIETNAM_TZ)
+    return dt.astimezone(VIETNAM_TZ)
+
 
 # Bank accounts for manual payment
 BANK_ACCOUNTS = {
@@ -33,11 +51,11 @@ BANK_ACCOUNTS = {
     }
 }
 
+# CRITICAL FIX: Use unified plan names
 PLAN_PRICES = {
     "free": 0,
-    "basic": 199000,
+    "plus": 199000,
     "pro": 499000,
-    "enterprise": 0,
 }
 
 
@@ -80,7 +98,7 @@ async def create_payment(
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """
-    Create a new payment order.
+    Create a new payment order with duplicate prevention.
     """
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Authorization required")
@@ -90,12 +108,12 @@ async def create_payment(
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    # Validate plan
+    # Validate plan - CRITICAL FIX: use unified plan names
     if request.plan not in PLAN_PRICES:
         raise HTTPException(status_code=400, detail="Invalid plan")
 
     amount = PLAN_PRICES[request.plan]
-    if amount == 0 and request.plan != "enterprise":
+    if amount == 0:
         raise HTTPException(status_code=400, detail="Cannot pay for this plan")
 
     # Get user
@@ -103,16 +121,21 @@ async def create_payment(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Check if already has pending payment
+    # CRITICAL FIX: Check for pending payments with SAME plan to prevent duplicates
     existing = await db.payments.find_one({
         "user_id": ObjectId(user_id),
-        "status": "pending"
+        "plan": request.plan,
+        "status": {"$in": ["pending", "completed"]}
     })
     if existing:
-        raise HTTPException(status_code=400, detail="Bạn đã có đơn hàng đang chờ xử lý")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Bạn đã có đơn hàng đang chờ xử lý cho gói {request.plan}. Vui lòng chờ hoặc hủy đơn cũ."
+        )
 
-    # Create order
-    order_id = f"PA{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
+    # Create order with unique ID
+    now = now_vietnam()
+    order_id = f"PA{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
 
     payment_info = None
     if request.method == "banking":
@@ -128,8 +151,9 @@ async def create_payment(
         "amount": amount,
         "status": "pending",
         "payment_info": payment_info,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow()
+        "created_at": now,
+        "updated_at": now,
+        "user_confirmed": False
     }
 
     await db.payments.insert_one(payment_doc)
@@ -140,7 +164,7 @@ async def create_payment(
         "plan": request.plan,
         "order_id": order_id,
         "status": "pending_payment",
-        "requested_at": datetime.utcnow(),
+        "requested_at": now,
         "billing_cycle": "monthly",
         "price": amount,
     }
@@ -155,7 +179,7 @@ async def create_payment(
         plan=request.plan,
         method=request.method,
         payment_info=payment_info,
-        created_at=datetime.utcnow()
+        created_at=now
     )
 
 
@@ -170,7 +194,6 @@ async def payment_callback(
     Payment gateway callback.
     In production, this would be called by VNPay/MoMo after payment.
     """
-    # Accept JSON body as alternative to query params
     if not order_id:
         raise HTTPException(status_code=400, detail="order_id is required")
 
@@ -191,14 +214,20 @@ async def payment_callback(
     if str(payment["user_id"]) != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # Update payment status
+    # Prevent double-processing
+    if payment["status"] in ["completed", "approved"]:
+        return {"message": "Order already processed", "status": payment["status"]}
+
+    now = now_vietnam()
     new_status = "completed" if status == "success" else "failed"
+
+    # Update payment status
     await db.payments.update_one(
         {"order_id": order_id},
         {"$set": {
             "status": new_status,
-            "paid_at": datetime.utcnow() if new_status == "completed" else None,
-            "updated_at": datetime.utcnow()
+            "paid_at": now if new_status == "completed" else None,
+            "updated_at": now
         }}
     )
 
@@ -238,12 +267,17 @@ async def confirm_payment(
     if str(payment["user_id"]) != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    # Prevent double confirmation
+    if payment.get("user_confirmed"):
+        return {"message": "Đơn hàng đã được xác nhận trước đó.", "status": payment["status"]}
+
+    now = now_vietnam()
     await db.payments.update_one(
         {"order_id": order_id},
         {"$set": {
             "user_confirmed": True,
-            "confirmed_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "confirmed_at": now,
+            "updated_at": now
         }}
     )
 
@@ -257,7 +291,7 @@ async def get_my_orders(
     authorization: str = Header(None),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Get user's payment orders."""
+    """Get user's payment orders with Vietnam timezone."""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Authorization required")
 
@@ -278,8 +312,8 @@ async def get_my_orders(
                 "amount": p["amount"],
                 "method": p["method"],
                 "status": p["status"],
-                "created_at": str(p["created_at"]),
-                "paid_at": str(p["paid_at"]) if p.get("paid_at") else None,
+                "created_at": to_vietnam(p["created_at"]).isoformat() if p.get("created_at") else None,
+                "paid_at": to_vietnam(p["paid_at"]).isoformat() if p.get("paid_at") else None,
             }
             for p in payments
         ]

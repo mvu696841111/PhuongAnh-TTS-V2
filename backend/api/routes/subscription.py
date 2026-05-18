@@ -4,7 +4,7 @@ Handles subscription upgrades and management.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel
@@ -17,21 +17,32 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/subscription", tags=["subscription"])
 
+# Vietnam timezone
+VIETNAM_TZ = timezone(timedelta(hours=7))
+
+
+def now_vietnam() -> datetime:
+    """Get current datetime in Vietnam timezone (UTC+7)."""
+    return datetime.now(VIETNAM_TZ)
+
+
+# CRITICAL FIX: Use unified plan names (plus/pro, not basic/enterprise)
 # Plan prices (in VND)
 PLAN_PRICES = {
     "free": 0,
-    "basic": 199000,
+    "plus": 199000,
     "pro": 499000,
-    "enterprise": 0,  # Custom pricing
 }
 
 # Plan limits
 PLAN_LIMITS = {
     "free": {"daily_audio": 10, "monthly_chars": 10000},
-    "basic": {"daily_audio": 100, "monthly_chars": 100000},
+    "plus": {"daily_audio": 100, "monthly_chars": 100000},
     "pro": {"daily_audio": 999999, "monthly_chars": 500000},
-    "enterprise": {"daily_audio": 999999, "monthly_chars": 999999999},
 }
+
+# Plan hierarchy for upgrade validation
+PLAN_HIERARCHY = ["free", "plus", "pro"]
 
 
 class UpgradeRequest(BaseModel):
@@ -86,6 +97,7 @@ async def upgrade_subscription(
 
     logger.info(f"Subscription upgrade request: user={user_id}, plan={request.plan}")
 
+    # CRITICAL FIX: Validate plan against unified plan names
     if request.plan not in PLAN_PRICES:
         raise HTTPException(status_code=400, detail="Invalid plan")
 
@@ -96,9 +108,11 @@ async def upgrade_subscription(
 
     current_plan = user.get("subscription_plan", "free")
 
-    # Check if upgrading (not downgrading)
-    hierarchy = {"free": 0, "basic": 1, "pro": 2, "enterprise": 3}
-    if hierarchy.get(request.plan, 0) <= hierarchy.get(current_plan, 0):
+    # Check if upgrading (not downgrading) - use PLAN_HIERARCHY
+    current_level = PLAN_HIERARCHY.index(current_plan) if current_plan in PLAN_HIERARCHY else 0
+    new_level = PLAN_HIERARCHY.index(request.plan) if request.plan in PLAN_HIERARCHY else 0
+
+    if new_level <= current_level:
         raise HTTPException(status_code=400, detail="Cannot downgrade or stay on same plan")
 
     # Check if there's already a pending request
@@ -110,7 +124,7 @@ async def upgrade_subscription(
         raise HTTPException(status_code=400, detail="You already have a pending subscription request")
 
     # Create pending subscription request
-    now = datetime.utcnow()
+    now = now_vietnam()
     result = await db.subscriptions.insert_one({
         "user_id": ObjectId(user_id),
         "plan": request.plan,
@@ -147,7 +161,7 @@ async def get_plan_limits(
 
 @router.get("/pricing")
 async def get_pricing():
-    """Get all plan pricing."""
+    """Get all plan pricing with unified plan names."""
     return {
         "plans": [
             {
@@ -158,11 +172,11 @@ async def get_pricing():
                 "limits": PLAN_LIMITS["free"]
             },
             {
-                "id": "basic",
-                "name": "Basic",
-                "price": PLAN_PRICES["basic"],
+                "id": "plus",
+                "name": "Plus",
+                "price": PLAN_PRICES["plus"],
                 "price_display": "199,000đ/tháng",
-                "limits": PLAN_LIMITS["basic"]
+                "limits": PLAN_LIMITS["plus"]
             },
             {
                 "id": "pro",
@@ -170,13 +184,53 @@ async def get_pricing():
                 "price": PLAN_PRICES["pro"],
                 "price_display": "499,000đ/tháng",
                 "limits": PLAN_LIMITS["pro"]
-            },
-            {
-                "id": "enterprise",
-                "name": "Enterprise",
-                "price": 0,
-                "price_display": "Liên hệ báo giá",
-                "limits": PLAN_LIMITS["enterprise"]
             }
         ]
+    }
+
+
+@router.get("/me")
+async def get_my_subscription(
+    authorization: str = Header(None),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get current user's subscription status."""
+    from bson import ObjectId
+
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization required")
+
+    token = authorization[7:]
+    user_id = get_current_user_id(token, db)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    plan = user.get("subscription_plan", "free")
+    status = user.get("subscription_status", "active")
+    expires_at = user.get("subscription_expires_at")
+    started_at = user.get("subscription_started_at")
+
+    # Check expiration
+    now = now_vietnam()
+    remaining_days = None
+    if expires_at:
+        expires_vn = expires_at
+        if expires_vn.tzinfo is None:
+            expires_vn = expires_vn.replace(tzinfo=timezone.utc).astimezone(VIETNAM_TZ)
+        if now < expires_vn:
+            remaining_days = (expires_vn - now).days
+        elif plan != "free":
+            status = "expired"
+
+    return {
+        "plan": plan,
+        "status": status,
+        "started_at": started_at.isoformat() if started_at else None,
+        "expires_at": expires_at.isoformat() if expires_at else None,
+        "remaining_days": remaining_days,
+        "price": PLAN_PRICES.get(plan, 0)
     }

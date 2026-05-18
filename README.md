@@ -1,4 +1,4 @@
-# 🦜 phuonganh-tts — Vietnamese TTS Studio
+# 🦜 phuonganh-tts — Vietnamese TTS Studiooo
 
 > **phuonganh-tts** is a Vietnamese Text-to-Speech model with instant voice cloning and bilingual (English-Vietnamese) support.
 > Built on VITS architecture with GGUF/ONNX optimization for efficient inference.

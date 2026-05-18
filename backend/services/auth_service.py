@@ -5,7 +5,7 @@ Handles user authentication, JWT tokens, and security.
 
 import logging
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -19,6 +19,24 @@ logger = logging.getLogger(__name__)
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Vietnam timezone for consistent time handling
+VIETNAM_TZ = timezone(timedelta(hours=7))
+
+
+def now_vietnam() -> datetime:
+    """Get current datetime in Vietnam timezone (UTC+7)."""
+    return datetime.now(VIETNAM_TZ)
+
+
+def to_vietnam(dt: datetime) -> datetime:
+    """Convert a datetime to Vietnam timezone."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        # Assume UTC if no timezone info
+        return dt.replace(tzinfo=timezone.utc).astimezone(VIETNAM_TZ)
+    return dt.astimezone(VIETNAM_TZ)
 
 
 class AuthService:
@@ -73,52 +91,52 @@ class AuthService:
     def create_access_token(self, user_id: str, **extra_claims) -> str:
         """
         Create a JWT access token.
-        
+
         Args:
             user_id: User ID to encode in token
             **extra_claims: Additional claims to include in token
-            
+
         Returns:
             Encoded JWT token string
         """
-        expire = datetime.utcnow() + timedelta(
+        expire = now_vietnam() + timedelta(
             minutes=self.settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
         )
-        
+
         payload = {
             "sub": user_id,
             "exp": expire,
-            "iat": datetime.utcnow(),
+            "iat": now_vietnam(),
             "type": "access",
             **extra_claims
         }
-        
+
         token = jwt.encode(
             payload,
             self.settings.JWT_SECRET_KEY,
             algorithm=self.settings.JWT_ALGORITHM
         )
-        
+
         return token
 
     def create_refresh_token(self, user_id: str) -> Tuple[str, str]:
         """
         Create a refresh token and store it in database.
-        
+
         Args:
             user_id: User ID to create token for
-            
+
         Returns:
             Tuple of (token, token_hash)
         """
-        expire = datetime.utcnow() + timedelta(
+        expire = now_vietnam() + timedelta(
             days=self.settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
         )
-        
+
         # Create a secure random token
         token = secrets.token_urlsafe(64)
         token_hash = self.hash_password(token)
-        
+
         return token, token_hash
 
     def create_tokens(self, user_id: str, **extra_claims) -> dict:
@@ -176,17 +194,21 @@ class AuthService:
         email: str,
         password: str,
         username: Optional[str] = None,
-        phone: Optional[str] = None
+        phone: Optional[str] = None,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None
     ) -> Tuple[Optional[dict], Optional[str]]:
         """
         Register a new user.
-        
+
         Args:
             email: User email
             password: Plain text password
             username: Optional username
             phone: Optional phone number
-            
+            ip_address: Client IP address
+            user_agent: Client user agent
+
         Returns:
             Tuple of (user_dict, error_message)
         """
@@ -195,11 +217,11 @@ class AuthService:
             existing = await self.users.find_one({"email": email})
             if existing:
                 return None, "Email already registered"
-            
+
             # Create user document
-            now = datetime.utcnow()
+            now = now_vietnam()
             verification_token = secrets.token_urlsafe(32)
-            
+
             user_doc = {
                 "email": email.lower().strip(),
                 "password_hash": self.hash_password(password),
@@ -217,12 +239,14 @@ class AuthService:
                 "metadata": {
                     "registration_source": "web",
                     "email_verified": False,
+                    "registration_ip": ip_address,
+                    "registration_user_agent": user_agent,
                 }
             }
-            
+
             result = await self.users.insert_one(user_doc)
             user_id = str(result.inserted_id)
-            
+
             # Create initial subscription record
             await self.db.subscriptions.insert_one({
                 "user_id": ObjectId(user_id),
@@ -233,17 +257,21 @@ class AuthService:
                 "payment_history": [],
                 "status": "active"
             })
-            
-            # Log the registration
+
+            # Log the registration with Vietnam timezone
             await self.db.usage_logs.insert_one({
                 "user_id": ObjectId(user_id),
                 "action": "register",
                 "timestamp": now,
-                "metadata": {"source": "web"}
+                "metadata": {
+                    "source": "web",
+                    "ip_address": ip_address,
+                    "user_agent": user_agent
+                }
             })
-            
+
             logger.info(f"✓ User registered: {email}")
-            
+
             return {
                 "id": user_id,
                 "email": email,
@@ -251,7 +279,7 @@ class AuthService:
                 "subscription_plan": "free",
                 "verification_token": verification_token
             }, None
-            
+
         except Exception as e:
             logger.error(f"Registration error: {e}")
             return None, "Registration failed"
@@ -263,31 +291,35 @@ class AuthService:
     async def authenticate_user(
         self,
         email: str,
-        password: str
+        password: str,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None
     ) -> Tuple[Optional[dict], Optional[str]]:
         """
         Authenticate a user by email and password.
-        
+
         Args:
             email: User email
             password: Plain text password
-            
+            ip_address: Client IP address for login history
+            user_agent: Client user agent for login history
+
         Returns:
             Tuple of (user_dict, error_message)
         """
         try:
             # Find user by email
             user = await self.users.find_one({"email": email.lower().strip()})
-            
+
             if not user:
                 return None, "Invalid email or password"
-            
+
             # Verify password
             if not self.verify_password(password, user["password_hash"]):
                 return None, "Invalid email or password"
-            
+
             # Update last login
-            now = datetime.utcnow()
+            now = now_vietnam()
             await self.users.update_one(
                 {"_id": user["_id"]},
                 {
@@ -297,14 +329,15 @@ class AuthService:
                     }
                 }
             )
-            
-            # Create tokens
+
+            # Create tokens with role included
             tokens = self.create_tokens(
                 str(user["_id"]),
                 email=user["email"],
-                plan=user.get("subscription_plan", "free")
+                plan=user.get("subscription_plan", "free"),
+                role=user.get("role", "user")
             )
-            
+
             # Store refresh token hash in database
             await self.sessions.insert_one({
                 "user_id": user["_id"],
@@ -312,20 +345,24 @@ class AuthService:
                 "created_at": now,
                 "expires_at": now + timedelta(days=self.settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS),
                 "is_revoked": False,
-                "user_agent": None,
-                "ip_address": None
+                "user_agent": user_agent,
+                "ip_address": ip_address
             })
-            
-            # Log the login
+
+            # Log the login with Vietnam timezone
             await self.db.usage_logs.insert_one({
                 "user_id": user["_id"],
                 "action": "login",
                 "timestamp": now,
-                "metadata": {}
+                "metadata": {
+                    "ip_address": ip_address,
+                    "user_agent": user_agent,
+                    "success": True
+                }
             })
-            
+
             logger.info(f"✓ User logged in: {email}")
-            
+
             return {
                 "id": str(user["_id"]),
                 "email": user["email"],
@@ -336,7 +373,7 @@ class AuthService:
                 "refresh_token": tokens["refresh_token"],
                 "token_type": tokens["token_type"]
             }, None
-            
+
         except Exception as e:
             logger.error(f"Login error: {e}")
             return None, "Authentication failed"
@@ -348,10 +385,10 @@ class AuthService:
     async def refresh_tokens(self, refresh_token: str) -> Tuple[Optional[dict], Optional[str]]:
         """
         Refresh access token using refresh token.
-        
+
         Args:
             refresh_token: Refresh token from login
-            
+
         Returns:
             Tuple of (tokens_dict, error_message)
         """
@@ -360,36 +397,37 @@ class AuthService:
             session = await self.sessions.find_one({
                 "refresh_token_hash": self.hash_password(refresh_token),
                 "is_revoked": False,
-                "expires_at": {"$gt": datetime.utcnow()}
+                "expires_at": {"$gt": now_vietnam()}
             })
-            
+
             if not session:
                 return None, "Invalid or expired refresh token"
-            
+
             # Get user
             user = await self.users.find_one({"_id": session["user_id"]})
             if not user:
                 return None, "User not found"
-            
-            # Create new tokens
+
+            # Create new tokens with role included
             tokens = self.create_tokens(
                 str(user["_id"]),
                 email=user["email"],
-                plan=user.get("subscription_plan", "free")
+                plan=user.get("subscription_plan", "free"),
+                role=user.get("role", "user")
             )
-            
+
             # Update session with new refresh token hash
             await self.sessions.update_one(
                 {"_id": session["_id"]},
                 {"$set": {"refresh_token_hash": tokens["refresh_token_hash"]}}
             )
-            
+
             return {
                 "access_token": tokens["access_token"],
                 "refresh_token": tokens["refresh_token"],
                 "token_type": tokens["token_type"]
             }, None
-            
+
         except Exception as e:
             logger.error(f"Token refresh error: {e}")
             return None, "Token refresh failed"
@@ -447,10 +485,10 @@ class AuthService:
     async def verify_email(self, token: str) -> Tuple[bool, Optional[str]]:
         """
         Verify user email using token.
-        
+
         Args:
             token: Verification token from email
-            
+
         Returns:
             Tuple of (success, message)
         """
@@ -458,21 +496,21 @@ class AuthService:
             user = await self.users.find_one({"verification_token": token})
             if not user:
                 return False, "Invalid verification token"
-            
+
             await self.users.update_one(
                 {"_id": user["_id"]},
                 {
                     "$set": {
                         "is_verified": True,
                         "verification_token": None,
-                        "updated_at": datetime.utcnow()
+                        "updated_at": now_vietnam()
                     },
                     "$unset": {"metadata.email_verified": ""}
                 }
             )
-            
+
             return True, "Email verified successfully"
-            
+
         except Exception as e:
             logger.error(f"Email verification error: {e}")
             return False, "Verification failed"

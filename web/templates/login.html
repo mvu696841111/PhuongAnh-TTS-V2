@@ -105,9 +105,21 @@
 
     <script src="/static/js/app.js"></script>
     <script>
-        // Check if already logged in
-        if (localStorage.getItem('auth_token')) {
-            window.location.href = '/tts';
+        // Check if already logged in - redirect based on role
+        const token = localStorage.getItem('auth_token');
+        const userStr = localStorage.getItem('user');
+        if (token) {
+            try {
+                const user = JSON.parse(userStr);
+                // CRITICAL: Admin users go to admin dashboard, not tts page
+                if (user && user.role === 'admin') {
+                    window.location.href = '/admin';
+                } else {
+                    window.location.href = '/tts';
+                }
+            } catch {
+                window.location.href = '/tts';
+            }
         }
 
         // Show alert
@@ -149,19 +161,35 @@
                     throw new Error(data.detail || 'Đăng nhập thất bại');
                 }
 
-                // Save token
+                // Save token and user
                 localStorage.setItem('auth_token', data.access_token);
                 localStorage.setItem('user', JSON.stringify(data.user));
 
+                // CRITICAL FIX: Redirect based on user role
+                // Admin users go directly to admin dashboard
+                const isAdmin = data.user && data.user.role === 'admin';
+                const redirectUrl = isAdmin ? '/admin' : '/tts';
+
                 showAlert('Đăng nhập thành công! Đang chuyển hướng...', 'success');
-                
+
                 // Redirect after short delay
                 setTimeout(() => {
-                    window.location.href = '/tts';
+                    window.location.href = redirectUrl;
                 }, 1000);
 
             } catch (error) {
-                showAlert(error.message || 'Đã xảy ra lỗi. Vui lòng thử lại.', 'error');
+                console.error('Login error:', error);
+                
+                // Handle different error types
+                let errorMessage = 'Đã xảy ra lỗi. Vui lòng thử lại.';
+                
+                if (error.message.includes('Failed to fetch') || error.message.includes('net::ERR')) {
+                    errorMessage = 'Không thể kết nối server. Vui lòng kiểm tra server đang chạy.';
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+                
+                showAlert(errorMessage, 'error');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Đăng nhập';
             }

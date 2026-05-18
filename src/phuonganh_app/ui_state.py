@@ -63,6 +63,23 @@ class UserInfo:
     username: Optional[str] = None
     subscription_plan: str = "free"
     is_verified: bool = False
+    role: str = "user"  # Added for admin role support
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "UserInfo":
+        """Create UserInfo from a dictionary (e.g., from API response)."""
+        return cls(
+            id=data.get("id", ""),
+            email=data.get("email", ""),
+            username=data.get("username"),
+            subscription_plan=data.get("subscription_plan", "free"),
+            is_verified=data.get("is_verified", False),
+            role=data.get("role", "user"),
+        )
+
+    def is_admin(self) -> bool:
+        """Check if user has admin role."""
+        return self.role == "admin"
 
 
 @dataclass

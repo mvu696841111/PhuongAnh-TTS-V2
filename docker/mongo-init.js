@@ -54,13 +54,19 @@ db.createCollection("users", {
                 password_hash: { bsonType: "string" },
                 username: { bsonType: "string" },
                 phone: { bsonType: "string" },
+                role: {
+                    bsonType: "string",
+                    enum: ["user", "admin"],
+                    default: "user"
+                },
                 subscription_plan: {
+                    // CRITICAL FIX: Use unified plan names (free/plus/pro)
                     enum: ["free", "plus", "pro"],
                     default: "free"
                 },
                 subscription_expires_at: { bsonType: "date" },
                 subscription_status: {
-                    enum: ["active", "expired", "cancelled", "trial"],
+                    enum: ["active", "expired", "cancelled", "expiring_soon", "trial"],
                     default: "active"
                 },
                 is_verified: { bsonType: "bool", default: false },
@@ -126,12 +132,14 @@ db.createCollection("subscriptions", {
             required: ["user_id", "plan", "started_at"],
             properties: {
                 user_id: { bsonType: "objectId" },
+                // CRITICAL FIX: Use unified plan names (free/plus/pro)
                 plan: { enum: ["free", "plus", "pro"] },
                 started_at: { bsonType: "date" },
                 expires_at: { bsonType: "date" },
                 auto_renew: { bsonType: "bool", default: false },
                 payment_history: { bsonType: "array" },
-                status: { enum: ["active", "expired", "cancelled"] }
+                // CRITICAL FIX: Added "expiring_soon" status
+                status: { enum: ["active", "expired", "cancelled", "pending", "pending_payment", "awaiting_approval", "expiring_soon", "rejected"] }
             }
         }
     }
@@ -180,6 +188,31 @@ db.createCollection("sessions", {
 });
 print("✓ Created collection: sessions");
 
+// --- Payments Collection ---
+db.createCollection("payments", {
+    validator: {
+        $jsonSchema: {
+            bsonType: "object",
+            required: ["order_id", "user_id", "plan", "amount", "created_at"],
+            properties: {
+                order_id: { bsonType: "string" },
+                user_id: { bsonType: "objectId" },
+                // CRITICAL FIX: Use unified plan names
+                plan: { enum: ["free", "plus", "pro"] },
+                amount: { bsonType: "number" },
+                method: { enum: ["vnpay", "momo", "banking", "cash"] },
+                status: { enum: ["pending", "completed", "approved", "rejected", "failed"] },
+                user_confirmed: { bsonType: "bool", default: false },
+                confirmed_at: { bsonType: "date" },
+                created_at: { bsonType: "date" },
+                updated_at: { bsonType: "date" },
+                paid_at: { bsonType: "date" }
+            }
+        }
+    }
+});
+print("✓ Created collection: payments");
+
 // ===========================================
 // 3. Create Indexes
 // ===========================================
@@ -220,6 +253,13 @@ db.sessions.createIndex({ "refresh_token_hash": 1 }, { sparse: true, background:
 db.sessions.createIndex({ "expires_at": 1 }, { expireAfterSeconds: 0, background: true });
 print("✓ Created indexes on: sessions");
 
+// Payments indexes
+db.payments.createIndex({ "order_id": 1 }, { unique: true, background: true });
+db.payments.createIndex({ "user_id": 1, "created_at": -1 }, { background: true });
+db.payments.createIndex({ "status": 1, "created_at": -1 }, { background: true });
+db.payments.createIndex({ "plan": 1, "status": 1 }, { background: true });
+print("✓ Created indexes on: payments");
+
 // ===========================================
 // 4. Create TTL Index for auto-delete old data
 // ===========================================
@@ -249,6 +289,7 @@ try {
         email: adminEmail,
         password_hash: adminPasswordHash,
         username: "admin",
+        role: "admin",  // CRITICAL FIX: Explicitly set admin role
         subscription_plan: "pro",
         subscription_status: "active",
         subscription_expires_at: new Date("2099-12-31"),
