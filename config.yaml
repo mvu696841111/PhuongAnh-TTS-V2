@@ -8,7 +8,7 @@ text_settings:
   max_total_chars_streaming: 3000
 
 # Default bundled model — auto-loaded on startup
-default_model: "phuonganh-tts-v2 (GPU)"
+default_model: "phuonganh-tts-v2 Turbo (CPU)"
 
 backbone_configs:
   "phuonganh-tts-v2 (GPU)":
