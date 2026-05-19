@@ -33,17 +33,14 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /workspace
 
-# Copy dependency files first for better caching
-COPY pyproject.toml uv.lock ./
-
-# Install dependencies (CPU mode - no GPU)
-RUN uv sync --no-dev
-
-# Copy application code
+# Copy application code first (needed for pyproject.toml package discovery)
 COPY . .
 
 # Create directories for models and outputs
 RUN mkdir -p models outputs data/temp
+
+# Install dependencies (CPU mode - no GPU)
+RUN uv sync --no-dev
 
 # Expose Gradio port
 EXPOSE 7860
