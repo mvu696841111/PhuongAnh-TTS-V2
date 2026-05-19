@@ -1,458 +1,286 @@
 """
-Subscription service for PhuongAnh-TTS Backend.
-Handles subscription plans, upgrades, and billing.
+Subscription Service for PhuongAnh-TTS Backend.
+Handles subscription plan limits and quota management.
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import Optional, List, Dict, Any
+from datetime import datetime, timedelta
+from typing import Optional, Dict, Any, Tuple
+from pymongo.database import Database
 from bson import ObjectId
-from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from core.config import get_settings, get_subscription_limits
-from core.database import get_database
+from models.schemas.subscription import PlanType, PlanLimits, FeatureFlags
 
 logger = logging.getLogger(__name__)
 
-# Vietnam timezone for consistent time handling
-VIETNAM_TZ = timezone(timedelta(hours=7))
-
-
-def now_vietnam() -> datetime:
-    """Get current datetime in Vietnam timezone (UTC+7)."""
-    return datetime.now(VIETNAM_TZ)
-
-
-def to_vietnam(dt: datetime) -> datetime:
-    """Convert a datetime to Vietnam timezone."""
-    if dt is None:
-        return None
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc).astimezone(VIETNAM_TZ)
-    return dt.astimezone(VIETNAM_TZ)
-
-
-# Plan hierarchy for upgrade validation (higher index = higher tier)
-PLAN_HIERARCHY = ["free", "plus", "pro"]
-
-# Plan prices (VND)
-PLAN_PRICES = {
-    "free": 0,
-    "plus": 199000,
-    "pro": 499000,
-}
-
 
 class SubscriptionService:
-    """
-    Subscription service for managing user plans.
-    """
-
-    def __init__(self, db: AsyncIOMotorDatabase):
+    """Service for managing subscription limits and features."""
+    
+    def __init__(self, db: Database):
         self.db = db
-        self.settings = get_settings()
-        self.limits = get_subscription_limits()
-        self.users = db.users
-        self.subscriptions = db.subscriptions
-        self.plans = db.subscriptions_plans
-
-    # ===========================================
-    # Plan Information
-    # ===========================================
-
-    async def get_available_plans(self) -> List[dict]:
+        self.plans_collection = db.subscriptions_plans
+        self.users_collection = db.users
+        self.audio_collection = db.audio_files
+    
+    async def get_user_plan(self, user_id: Optional[str], session_id: Optional[str] = None) -> Tuple[Dict, Dict, Dict]:
         """
-        Get all available subscription plans.
-        
-        Returns:
-            List of plan dictionaries
-        """
-        try:
-            plans = await self.plans.find({}).to_list(length=None)
-            
-            result = []
-            for plan in plans:
-                result.append({
-                    "id": plan["_id"],
-                    "name": plan["name"],
-                    "description": plan["description"],
-                    "price_monthly": plan["price_monthly"],
-                    "price_yearly": plan["price_yearly"],
-                    "features": plan["features"],
-                    "permissions": plan.get("permissions", []),
-                    "is_popular": plan["_id"] == "plus"
-                })
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"Get plans error: {e}")
-            return []
-
-    async def get_plan_info(self, plan_id: str) -> Optional[dict]:
-        """
-        Get information about a specific plan.
-        
-        Args:
-            plan_id: Plan ID (free, plus, pro)
-            
-        Returns:
-            Plan dict or None
-        """
-        try:
-            plan = await self.plans.find_one({"_id": plan_id})
-            if plan:
-                plan["id"] = plan.pop("_id")
-                return plan
-            return None
-        except Exception as e:
-            logger.error(f"Get plan info error: {e}")
-            return None
-
-    # ===========================================
-    # User Subscription
-    # ===========================================
-
-    async def get_user_subscription(self, user_id: str) -> Optional[dict]:
-        """
-        Get user's current subscription with accurate status.
-
-        Args:
-            user_id: User ID
+        Get user's plan limits and features.
 
         Returns:
-            Subscription dict or None
+            Tuple of (limits, features, plan_info)
         """
+        default_limits = {
+            "max_chars_per_month": 5000,
+            "max_audio_per_day": 10,
+            "max_text_length": 500,
+            "max_audio_duration": 30,
+            "max_audio_per_month": 50,
+            "max_concurrent_jobs": 1,
+        }
+        default_features = {
+            "voice_cloning": False,
+            "long_text": False,
+            "priority_queue": False,
+            "api_access": False,
+            "watermark_free": True,
+            "custom_voices": False,
+            "batch_processing": False,
+            "analytics": False,
+            "support_priority": "email",
+        }
+
+        if not user_id and not session_id:
+            return default_limits, default_features, {"plan_type": "free", "name": "Miễn phí"}
+
         try:
-            user = await self.users.find_one({"_id": ObjectId(user_id)})
-            if not user:
-                return None
-
-            plan_id = user.get("subscription_plan", "free")
-            expires_at = user.get("subscription_expires_at")
-            status = user.get("subscription_status", "active")
-
-            # Check if subscription is expired
-            now = now_vietnam()
-            expires_at_vn = to_vietnam(expires_at) if expires_at else None
-
-            # Determine actual status
-            if plan_id != "free" and expires_at_vn:
-                if now > expires_at_vn:
-                    status = "expired"
-                elif (expires_at_vn - now).days <= 3:
-                    status = "expiring_soon"
-            elif plan_id == "free":
-                status = "active"  # Free plan never expires
-
-            # Calculate remaining days
-            remaining_days = None
-            if plan_id != "free" and expires_at_vn:
-                if now <= expires_at_vn:
-                    remaining_days = (expires_at_vn - now).days
-                else:
-                    remaining_days = 0
-
-            plan = await self.plans.find_one({"_id": plan_id})
-            features = plan.get("features", {}) if plan else {}
-
-            return {
-                "current_plan": plan_id,
-                "status": status,
-                "started_at": to_vietnam(user.get("created_at")),
-                "expires_at": expires_at_vn,
-                "remaining_days": remaining_days,
-                "features": features,
-                "can_upgrade": True,
-                "upgrade_available": self._get_upgrade_options(plan_id),
-                "price": PLAN_PRICES.get(plan_id, 0)
-            }
-
-        except Exception as e:
-            logger.error(f"Get subscription error: {e}")
-            return None
-
-    def _get_upgrade_options(self, current_plan: str) -> List[str]:
-        """Get available plan upgrades from current plan."""
-        hierarchy = {"free": ["plus", "pro"], "plus": ["pro"], "pro": []}
-        return hierarchy.get(current_plan, [])
-
-    async def upgrade_subscription(
-        self,
-        user_id: str,
-        new_plan: str,
-        billing_cycle: str = "monthly",
-        payment_id: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Upgrade user subscription with proper expiration handling.
-
-        Args:
-            user_id: User ID
-            new_plan: Target plan ID
-            billing_cycle: Monthly or yearly
-            payment_id: Optional payment ID for reference
-
-        Returns:
-            Result dict with success status
-        """
-        try:
-            # Get current user
-            user = await self.users.find_one({"_id": ObjectId(user_id)})
-            if not user:
-                return {"success": False, "message": "User not found"}
-
-            current_plan = user.get("subscription_plan", "free")
-
-            # Check if upgrade is valid
-            if new_plan not in self._get_upgrade_options(current_plan):
-                return {
-                    "success": False,
-                    "message": f"Cannot upgrade from {current_plan} to {new_plan}"
-                }
-
-            # Get plan info
-            plan_info = await self.plans.find_one({"_id": new_plan})
-            if not plan_info:
-                return {"success": False, "message": "Plan not found"}
-
-            now = now_vietnam()
-
-            # Calculate expiration
-            if billing_cycle == "yearly":
-                expires_at = now + timedelta(days=365)
+            if user_id:
+                user = await self.users_collection.find_one({"_id": ObjectId(user_id)})
             else:
-                expires_at = now + timedelta(days=30)
+                user = await self.users_collection.find_one({"session_id": session_id})
 
-            # Check if user already has an active subscription to extend
-            current_expires = user.get("subscription_expires_at")
-            current_expires_vn = to_vietnam(current_expires) if current_expires else None
+            if not user:
+                return default_limits, default_features, {"plan_type": "free", "name": "Miễn phí"}
 
-            # If current subscription is still active, extend from current expiration
-            # Otherwise, start from now
-            if current_expires_vn and current_expires_vn > now:
-                start_date = current_expires_vn
-                new_expires_at = current_expires_vn + timedelta(days=30 if billing_cycle == "monthly" else 365)
-            else:
-                start_date = now
-                new_expires_at = expires_at
-
-            # Update user
-            await self.users.update_one(
-                {"_id": ObjectId(user_id)},
-                {
-                    "$set": {
-                        "subscription_plan": new_plan,
-                        "subscription_status": "active",
-                        "subscription_expires_at": new_expires_at,
-                        "subscription_started_at": start_date,
-                        "updated_at": now
-                    }
-                }
-            )
-
-            # Create subscription record
-            await self.subscriptions.insert_one({
-                "user_id": ObjectId(user_id),
-                "plan": new_plan,
-                "started_at": start_date,
-                "expires_at": new_expires_at,
-                "auto_renew": billing_cycle == "yearly",
-                "billing_cycle": billing_cycle,
-                "payment_id": payment_id,
-                "payment_history": [{
-                    "date": now,
-                    "amount": PLAN_PRICES.get(new_plan, 0) * (12 if billing_cycle == "yearly" else 1),
-                    "billing_cycle": billing_cycle,
-                    "status": "completed"
-                }],
+            plan_type = user.get("plan_type", PlanType.FREE.value)
+            plan = await self.plans_collection.find_one({
+                "plan_type": plan_type,
                 "status": "active"
             })
 
-            # Log upgrade with Vietnam timezone
-            await self.db.usage_logs.insert_one({
-                "user_id": ObjectId(user_id),
-                "action": "upgrade",
-                "timestamp": now,
-                "metadata": {
-                    "from_plan": current_plan,
-                    "to_plan": new_plan,
-                    "billing_cycle": billing_cycle
-                }
-            })
+            if not plan:
+                plan = await self.plans_collection.find_one({
+                    "plan_type": PlanType.FREE.value,
+                    "status": "active"
+                })
 
-            logger.info(f"✓ User {user_id} upgraded to {new_plan}")
+            if not plan:
+                return default_limits, default_features, {"plan_type": "free", "name": "Miễn phí"}
 
-            return {
-                "success": True,
-                "message": f"Successfully upgraded to {plan_info['name']}",
-                "new_plan": new_plan,
-                "effective_date": start_date,
-                "expires_at": new_expires_at,
-                "remaining_days": (new_expires_at - now).days if new_expires_at > now else 0
-            }
-
-        except Exception as e:
-            logger.error(f"Upgrade subscription error: {e}")
-            return {"success": False, "message": "Upgrade failed"}
-
-    async def check_subscription_status(self, user_id: str) -> bool:
-        """
-        Check and update subscription status if expired.
-
-        Args:
-            user_id: User ID
-
-        Returns:
-            True if subscription is active
-        """
-        try:
-            user = await self.users.find_one({"_id": ObjectId(user_id)})
-            if not user:
-                return False
-
-            plan = user.get("subscription_plan", "free")
-            expires_at = user.get("subscription_expires_at")
-            now = now_vietnam()
-            expires_at_vn = to_vietnam(expires_at) if expires_at else None
-
-            # Check if expired
-            if plan != "free" and expires_at_vn:
-                if now > expires_at_vn:
-                    # Downgrade to free
-                    await self.users.update_one(
-                        {"_id": ObjectId(user_id)},
-                        {
-                            "$set": {
-                                "subscription_plan": "free",
-                                "subscription_status": "expired",
-                                "updated_at": now
-                            }
-                        }
-                    )
-                    logger.info(f"User {user_id} subscription expired, downgraded to free")
-                    return False
-
-            return user.get("subscription_status", "active") == "active"
-
-        except Exception as e:
-            logger.error(f"Check subscription status error: {e}")
-            return True  # Assume active on error
-
-    async def renew_subscription(
-        self,
-        user_id: str,
-        billing_cycle: str = "monthly",
-        payment_id: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Renew an existing subscription.
-
-        Args:
-            user_id: User ID
-            billing_cycle: Monthly or yearly
-            payment_id: Payment record ID
-
-        Returns:
-            Result dict
-        """
-        try:
-            user = await self.users.find_one({"_id": ObjectId(user_id)})
-            if not user:
-                return {"success": False, "message": "User not found"}
-
-            plan = user.get("subscription_plan", "free")
-            if plan == "free":
-                return {"success": False, "message": "Free plan cannot be renewed"}
-
-            now = now_vietnam()
-            current_expires = user.get("subscription_expires_at")
-            current_expires_vn = to_vietnam(current_expires) if current_expires else None
-
-            # Calculate new expiration
-            extension = timedelta(days=30 if billing_cycle == "monthly" else 365)
-
-            if current_expires_vn and current_expires_vn > now:
-                # Extend from current expiration
-                new_expires_at = current_expires_vn + extension
-            else:
-                # Start fresh from now
-                new_expires_at = now + extension
-
-            # Update user
-            await self.users.update_one(
-                {"_id": ObjectId(user_id)},
+            return (
+                plan.get("limits") or default_limits,
+                plan.get("features") or default_features,
                 {
-                    "$set": {
-                        "subscription_status": "active",
-                        "subscription_expires_at": new_expires_at,
-                        "updated_at": now
-                    }
+                    "plan_type": plan.get("plan_type", "free"),
+                    "name": plan.get("name", "Unknown"),
+                    "id": str(plan.get("_id", "")),
                 }
             )
+        except Exception as e:
+            logger.error(f"Error getting user plan: {e}")
+            return default_limits, default_features, {"plan_type": "free", "name": "Miễn phí"}
+    
+    async def check_limits(
+        self,
+        text: str,
+        user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        duration: float = 0,
+    ) -> Tuple[bool, str, Dict[str, Any]]:
+        """
+        Check if user is within their plan limits.
 
-            # Log renewal
-            await self.db.usage_logs.insert_one({
-                "user_id": ObjectId(user_id),
-                "action": "renew",
-                "timestamp": now,
-                "metadata": {
-                    "plan": plan,
-                    "billing_cycle": billing_cycle,
-                    "new_expires_at": str(new_expires_at)
-                }
-            })
+        Returns:
+            Tuple of (allowed, error_message, quota_info)
+        """
+        limits, features, plan_info = await self.get_user_plan(user_id, session_id)
+        now = datetime.utcnow()
 
-            logger.info(f"✓ User {user_id} renewed subscription to {plan}")
+        # Get current usage
+        month_start = datetime(now.year, now.month, 1)
+        today_start = datetime(now.year, now.month, now.day)
 
-            return {
-                "success": True,
-                "message": f"Subscription renewed successfully",
-                "expires_at": new_expires_at,
-                "remaining_days": (new_expires_at - now).days
+        text_length = len(text)
+
+        # Check text length limit
+        max_text_length = limits.get("max_text_length", 500)
+        if text_length > max_text_length:
+            return False, f"Văn bản quá dài. Tối đa {max_text_length} ký tự cho gói {plan_info['name']}.", {
+                "limit_type": "text_length",
+                "limit": max_text_length,
+                "current": text_length,
             }
 
-        except Exception as e:
-            logger.error(f"Renew subscription error: {e}")
-            return {"success": False, "message": "Renewal failed"}
+        # Check audio duration limit
+        max_duration = limits.get("max_audio_duration", 30)
+        if duration > max_duration:
+            return False, f"Audio quá dài. Tối đa {max_duration} giây cho gói {plan_info['name']}.", {
+                "limit_type": "audio_duration",
+                "limit": max_duration,
+                "current": duration,
+            }
 
-    # ===========================================
-    # Permission Checks
-    # ===========================================
+        # Query for usage stats
+        query_user = ObjectId(user_id) if user_id else session_id
+        user_id_field = "user_id" if user_id else "session_id"
 
-    async def has_permission(self, user_id: str, permission: str) -> bool:
-        """
-        Check if user has a specific permission.
+        # Check daily audio limit
+        daily_audio = await self.audio_collection.count_documents({
+            user_id_field: query_user,
+            "created_at": {"$gte": today_start}
+        })
+        max_audio_per_day = limits.get("max_audio_per_day", 10)
+        if max_audio_per_day > 0 and daily_audio >= max_audio_per_day:
+            return False, f"Đã đạt giới hạn {max_audio_per_day} audio/ngày cho gói {plan_info['name']}. Vui lòng thử lại sau.", {
+                "limit_type": "daily_audio",
+                "limit": max_audio_per_day,
+                "current": daily_audio,
+            }
+
+        # Check monthly character limit
+        monthly_chars_result = self.audio_collection.aggregate([
+            {"$match": {
+                user_id_field: query_user,
+                "created_at": {"$gte": month_start}
+            }},
+            {"$group": {
+                "_id": None,
+                "total_chars": {"$sum": {"$strLenCP": "$text_input"}}
+            }}
+        ])
+        monthly_chars = await monthly_chars_result.to_list(length=1)
+        monthly_chars = monthly_chars[0]["total_chars"] if monthly_chars else 0
+
+        max_chars_per_month = limits.get("max_chars_per_month", 5000)
+        if max_chars_per_month > 0 and (monthly_chars + text_length) > max_chars_per_month:
+            chars_remaining = max(0, max_chars_per_month - monthly_chars)
+            return False, f"Đã đạt giới hạn {max_chars_per_month} ký tự/tháng cho gói {plan_info['name']}. Còn lại: {chars_remaining} ký tự.", {
+                "limit_type": "monthly_chars",
+                "limit": max_chars_per_month,
+                "current": monthly_chars,
+                "remaining": chars_remaining,
+            }
+
+        # Check monthly audio limit
+        monthly_audio = await self.audio_collection.count_documents({
+            user_id_field: query_user,
+            "created_at": {"$gte": month_start}
+        })
+        max_audio_per_month = limits.get("max_audio_per_month", 50)
+        if max_audio_per_month > 0 and monthly_audio >= max_audio_per_month:
+            return False, f"Đã đạt giới hạn {max_audio_per_month} audio/tháng cho gói {plan_info['name']}.", {
+                "limit_type": "monthly_audio",
+                "limit": max_audio_per_month,
+                "current": monthly_audio,
+            }
+
+        return True, "", {
+            "plan": plan_info,
+            "usage": {
+                "chars_this_month": monthly_chars,
+                "audio_this_month": monthly_audio,
+                "audio_today": daily_audio,
+            },
+            "limits": limits,
+            "remaining": {
+                "chars": max(0, max_chars_per_month - monthly_chars - text_length) if max_chars_per_month > 0 else -1,
+                "audio_today": max(0, max_audio_per_day - daily_audio - 1) if max_audio_per_day > 0 else -1,
+            }
+        }
+    
+    async def get_quota_info(
+        self,
+        user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Get current quota information for a user."""
+        limits, features, plan_info = await self.get_user_plan(user_id, session_id)
+        now = datetime.utcnow()
+
+        month_start = datetime(now.year, now.month, 1)
+        today_start = datetime(now.year, now.month, now.day)
+
+        query_user = ObjectId(user_id) if user_id else session_id
+        user_id_field = "user_id" if user_id else "session_id"
+
+        daily_audio = await self.audio_collection.count_documents({
+            user_id_field: query_user,
+            "created_at": {"$gte": today_start}
+        })
+
+        monthly_stats = self.audio_collection.aggregate([
+            {"$match": {user_id_field: query_user, "created_at": {"$gte": month_start}}},
+            {"$group": {
+                "_id": None,
+                "total_chars": {"$sum": {"$strLenCP": "$text_input"}},
+                "total_audio": {"$sum": 1}
+            }}
+        ])
+        stats_list = await monthly_stats.to_list(length=1)
+        stats = stats_list[0] if stats_list else {"total_chars": 0, "total_audio": 0}
+
+        max_chars = limits.get("max_chars_per_month", 0)
+        max_audio_day = limits.get("max_audio_per_day", 0)
+        max_audio_month = limits.get("max_audio_per_month", 0)
+
+        return {
+            "plan": plan_info,
+            "features": features,
+            "usage": {
+                "chars_this_month": stats.get("total_chars", 0),
+                "audio_this_month": stats.get("total_audio", 0),
+                "audio_today": daily_audio,
+            },
+            "limits": {
+                "chars_per_month": max_chars,
+                "audio_per_day": max_audio_day,
+                "audio_per_month": max_audio_month,
+                "text_length": limits.get("max_text_length", 500),
+                "audio_duration": limits.get("max_audio_duration", 30),
+            },
+            "remaining": {
+                "chars": max(0, max_chars - stats.get("total_chars", 0)) if max_chars > 0 else -1,
+                "audio_today": max(0, max_audio_day - daily_audio) if max_audio_day > 0 else -1,
+                "audio_month": max(0, max_audio_month - stats.get("total_audio", 0)) if max_audio_month > 0 else -1,
+            },
+            "next_reset": (month_start + timedelta(days=32)).replace(day=1).isoformat(),
+        }
+    
+    async def check_feature_access(
+        self,
+        feature: str,
+        user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> Tuple[bool, str]:
+        """Check if user has access to a specific feature."""
+        limits, features, plan_info = await self.get_user_plan(user_id, session_id)
         
-        Args:
-            user_id: User ID
-            permission: Permission string (e.g., 'api:access')
-            
-        Returns:
-            True if user has permission
-        """
-        try:
-            await self.check_subscription_status(user_id)
-            
-            user = await self.users.find_one({"_id": ObjectId(user_id)})
-            if not user:
-                return False
-            
-            plan_id = user.get("subscription_plan", "free")
-            plan = await self.plans.find_one({"_id": plan_id})
-            
-            if not plan:
-                return False
-            
-            permissions = plan.get("permissions", [])
-            return permission in permissions
-            
-        except Exception as e:
-            logger.error(f"Check permission error: {e}")
-            return False
-
-
-# Factory function
-def get_subscription_service() -> SubscriptionService:
-    """Get SubscriptionService instance."""
-    return SubscriptionService(get_database())
+        feature_map = {
+            "voice_cloning": "Voice Cloning",
+            "long_text": "Xử lý văn bản dài",
+            "priority_queue": "Ưu tiên xử lý",
+            "api_access": "API Access",
+            "watermark_free": "Không watermark",
+            "custom_voices": "Tạo giọng tùy chỉnh",
+            "batch_processing": "Xử lý hàng loạt",
+            "analytics": "Thống kê chi tiết",
+        }
+        
+        if feature not in features:
+            return False, f"Tính năng không hợp lệ"
+        
+        if not features.get(feature, False):
+            feature_name = feature_map.get(feature, feature)
+            return False, f"Tính năng '{feature_name}' chỉ có ở gói cao hơn. Vui lòng nâng cấp gói."
+        
+        return True, ""

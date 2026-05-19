@@ -43,7 +43,6 @@
     <div class="mobile-menu">
         <a href="/">Trang chủ</a>
         <a href="/about">Giới thiệu</a>
-        <a href="/finance">Tài chính</a>
         <a href="/tts">TTS</a>
         <a href="/login" class="active">Đăng nhập</a>
         <a href="/register">Đăng ký</a>
@@ -99,7 +98,7 @@
     <footer class="footer" style="position: fixed; bottom: 0; left: 0; right: 0;">
         <div class="footer-bottom" style="margin-top: 0; padding-top: 0; border-top: none;">
             <p>© 2024 Phương Anh TTS. Tất cả quyền được bảo lưu.</p>
-            <p>Nguyễn Phương Anh - Text to Speech</p>
+            <p>Trần Phương Anh - Text to Speech</p>
         </div>
     </footer>
 
@@ -115,10 +114,10 @@
                 if (user && user.role === 'admin') {
                     window.location.href = '/admin';
                 } else {
-                    window.location.href = '/tts';
+                    window.location.href = '/index';
                 }
             } catch {
-                window.location.href = '/tts';
+                window.location.href = '/index';
             }
         }
 
@@ -168,7 +167,7 @@
                 // CRITICAL FIX: Redirect based on user role
                 // Admin users go directly to admin dashboard
                 const isAdmin = data.user && data.user.role === 'admin';
-                const redirectUrl = isAdmin ? '/admin' : '/tts';
+                const redirectUrl = isAdmin ? '/admin' : '/';
 
                 showAlert('Đăng nhập thành công! Đang chuyển hướng...', 'success');
 

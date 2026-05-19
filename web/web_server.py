@@ -10,6 +10,10 @@ from flask_cors import CORS
 app = Flask(__name__, template_folder='templates', static_folder='static')
 CORS(app)
 
+# Disable template caching for development
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.jinja_env.auto_reload = True
+
 # Get the directory of this file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -57,6 +61,18 @@ def register():
 def admin():
     """Admin dashboard page."""
     return render_template('admin.html')
+
+
+@app.route('/test_admin')
+def test_admin():
+    """Test Admin API page."""
+    return render_template('test_admin.html')
+
+
+@app.route('/autologin')
+def autologin():
+    """Auto login page for admin."""
+    return render_template('autologin.html')
 
 
 @app.route('/profile')

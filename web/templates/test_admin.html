@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Admin API - PhuongAnh TTS</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { color: #FF6B35; }
+        .card { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .success { color: green; }
+        .error { color: red; }
+        .data-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .stat-box { background: #f8f9fa; padding: 16px; border-radius: 8px; text-align: center; }
+        .stat-box h3 { margin: 0; color: #666; font-size: 14px; }
+        .stat-box .value { font-size: 32px; font-weight: bold; color: #FF6B35; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background: #f8f9fa; }
+        .loading { color: #666; font-style: italic; }
+        .btn { background: #FF6B35; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #E55A2B; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Admin API - PhuongAnh TTS</h1>
+        
+        <div class="card">
+            <h2>1. Đăng nhập Admin</h2>
+            <input type="email" id="email" value="admin@test.com" placeholder="Email" style="padding: 10px; width: 200px;">
+            <input type="password" id="password" value="Admin123" placeholder="Password" style="padding: 10px; width: 150px;">
+            <button class="btn" onclick="login()">Đăng nhập</button>
+            <p id="login-status" class="loading">Chưa đăng nhập</p>
+        </div>
+
+        <div id="dashboard-section" style="display:none;">
+            <div class="card">
+                <h2>2. Dashboard Stats</h2>
+                <div class="data-grid" id="stats-grid">
+                    <div class="stat-box">
+                        <h3>Tổng Users</h3>
+                        <div class="value" id="total-users">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <h3>Paid Users</h3>
+                        <div class="value" id="paid-users">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <h3>Usage Logs</h3>
+                        <div class="value" id="usage-logs">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <h3>Payments</h3>
+                        <div class="value" id="total-payments">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>3. Users List</h2>
+                <table id="users-table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Plan</th>
+                            <th>Role</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-body">
+                        <tr><td colspan="4" class="loading">Đang tải...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>4. Recent Usage Logs</h2>
+                <table id="logs-table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Action</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-body">
+                        <tr><td colspan="3" class="loading">Đang tải...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>5. Payments</h2>
+                <table id="payments-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Plan</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payments-body">
+                        <tr><td colspan="5" class="loading">Đang tải...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        let token = null;
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const status = document.getElementById('login-status');
+            
+            try {
+                const res = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                if (!res.ok) throw new Error('Login failed');
+                
+                const data = await res.json();
+                token = data.access_token;
+                status.textContent = `✅ Logged in as ${email}`;
+                status.className = 'success';
+                
+                // Load dashboard
+                document.getElementById('dashboard-section').style.display = 'block';
+                loadDashboard();
+            } catch (e) {
+                status.textContent = '❌ Login failed: ' + e.message;
+                status.className = 'error';
+            }
+        }
+
+        async function api(endpoint) {
+            const res = await fetch(`${API_BASE}${endpoint}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error(`API error: ${res.status}`);
+            return await res.json();
+        }
+
+        async function loadDashboard() {
+            try {
+                // Load all data in parallel
+                const [dashboard, users, logs, transactions] = await Promise.all([
+                    api('/admin/dashboard'),
+                    api('/admin/users'),
+                    api('/admin/usage/logs'),
+                    api('/admin/transactions')
+                ]);
+
+                // Update stats
+                document.getElementById('total-users').textContent = dashboard.total_users || 0;
+                document.getElementById('paid-users').textContent = dashboard.paid_users || 0;
+                document.getElementById('usage-logs').textContent = logs.total || 0;
+                document.getElementById('total-payments').textContent = transactions.total || 0;
+
+                // Users table
+                const usersBody = document.getElementById('users-body');
+                usersBody.innerHTML = (users.users || []).map(u => `
+                    <tr>
+                        <td>${u.email}</td>
+                        <td><span style="background:#FF6B35;color:white;padding:2px 8px;border-radius:4px;">${u.subscription_plan}</span></td>
+                        <td>${u.role}</td>
+                        <td>${new Date(u.created_at).toLocaleDateString('vi-VN')}</td>
+                    </tr>
+                `).join('');
+
+                // Logs table
+                const logsBody = document.getElementById('logs-body');
+                logsBody.innerHTML = (logs.logs || []).slice(0, 10).map(l => `
+                    <tr>
+                        <td>${l.user_email}</td>
+                        <td><span style="background:#3B82F6;color:white;padding:2px 8px;border-radius:4px;">${l.action}</span></td>
+                        <td>${new Date(l.timestamp_vietnam).toLocaleString('vi-VN')}</td>
+                    </tr>
+                `).join('');
+
+                // Payments table
+                const paymentsBody = document.getElementById('payments-body');
+                paymentsBody.innerHTML = (transactions.transactions || []).map(t => `
+                    <tr>
+                        <td><code>${t.order_id}</code></td>
+                        <td>${t.plan}</td>
+                        <td style="color:green;font-weight:bold;">${(t.amount || 0).toLocaleString()}đ</td>
+                        <td><span style="background:${t.status === 'approved' ? '#10B981' : '#F59E0B'};color:white;padding:2px 8px;border-radius:4px;">${t.status}</span></td>
+                        <td>${new Date(t.created_at).toLocaleDateString('vi-VN')}</td>
+                    </tr>
+                `).join('');
+
+            } catch (e) {
+                console.error('Error:', e);
+                alert('Error loading data: ' + e.message);
+            }
+        }
+
+        // Auto login for testing
+        window.onload = () => {
+            // Uncomment to auto login:
+            // login();
+        };
+    </script>
+</body>
+</html>

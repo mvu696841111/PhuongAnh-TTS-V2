@@ -133,7 +133,30 @@
             border-radius: var(--radius);
             padding: 24px;
             box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary);
+        }
+
+        .stat-card:nth-child(1)::before { background: linear-gradient(90deg, #FF6B35, #FF8C42); }
+        .stat-card:nth-child(2)::before { background: linear-gradient(90deg, #10B981, #34D399); }
+        .stat-card:nth-child(3)::before { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
+        .stat-card:nth-child(4)::before { background: linear-gradient(90deg, #8B5CF6, #A78BFA); }
 
         .stat-card-header {
             display: flex;
@@ -173,6 +196,73 @@
         .stat-card .change.positive {
             color: #10B981;
         }
+
+        .stat-card .change.negative {
+            color: #EF4444;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 12px;
+            background: #1F2937;
+            color: white;
+            font-size: 12px;
+            border-radius: 6px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+            visibility: visible;
+            bottom: calc(100% + 8px);
+        }
+
+        /* Skeleton Loading */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+        .stat-card:nth-child(4) { animation-delay: 0.4s; }
 
         /* Tables */
         .admin-table-container {
@@ -300,25 +390,10 @@
             font-weight: 600;
         }
 
-        .badge-success {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10B981;
-        }
-
-        .badge-warning {
-            background: rgba(245, 158, 11, 0.1);
-            color: #F59E0B;
-        }
-
-        .badge-danger {
-            background: rgba(239, 68, 68, 0.1);
-            color: #EF4444;
-        }
-
-        .badge-info {
-            background: rgba(59, 130, 246, 0.1);
-            color: #3B82F6;
-        }
+        .badge-success { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+        .badge-warning { background: rgba(245, 158, 11, 0.1); color: #F59E0B; }
+        .badge-danger { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
+        .badge-info { background: rgba(59, 130, 246, 0.1); color: #3B82F6; }
 
         /* Action Buttons */
         .action-btns {
@@ -338,35 +413,12 @@
             transition: var(--transition);
         }
 
-        .btn-action.edit {
-            background: rgba(59, 130, 246, 0.1);
-            color: #3B82F6;
-        }
-
-        .btn-action.edit:hover {
-            background: #3B82F6;
-            color: white;
-        }
-
-        .btn-action.delete {
-            background: rgba(239, 68, 68, 0.1);
-            color: #EF4444;
-        }
-
-        .btn-action.delete:hover {
-            background: #EF4444;
-            color: white;
-        }
-
-        .btn-action.view {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10B981;
-        }
-
-        .btn-action.view:hover {
-            background: #10B981;
-            color: white;
-        }
+        .btn-action.edit { background: rgba(59, 130, 246, 0.1); color: #3B82F6; }
+        .btn-action.edit:hover { background: #3B82F6; color: white; }
+        .btn-action.delete { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
+        .btn-action.delete:hover { background: #EF4444; color: white; }
+        .btn-action.view { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+        .btn-action.view:hover { background: #10B981; color: white; }
 
         /* Pagination */
         .pagination {
@@ -397,16 +449,8 @@
             transition: var(--transition);
         }
 
-        .pagination-btn:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .pagination-btn.active {
-            background: var(--primary);
-            border-color: var(--primary);
-            color: white;
-        }
+        .pagination-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .pagination-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
 
         /* Tabs */
         .admin-tabs {
@@ -429,27 +473,23 @@
             transition: var(--transition);
         }
 
-        .admin-tab:hover {
-            color: var(--primary);
-        }
+        .admin-tab:hover { color: var(--primary); }
+        .admin-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-        .admin-tab.active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-        }
-
-        .tab-panel {
-            display: none;
-        }
-
-        .tab-panel.active {
-            display: block;
-        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
 
         /* Charts Section */
         .charts-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .charts-grid-3 {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
             gap: 24px;
             margin-bottom: 32px;
         }
@@ -459,6 +499,12 @@
             border-radius: var(--radius);
             box-shadow: var(--shadow);
             padding: 24px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .chart-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.08);
         }
 
         .chart-header {
@@ -473,22 +519,12 @@
             font-weight: 600;
         }
 
-        .chart-placeholder {
-            height: 250px;
-            background: var(--bg-gray);
-            border-radius: var(--radius-sm);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-gray);
-        }
-
-        /* Chart containers */
         .chart-wrapper {
             position: relative;
             height: 250px;
             width: 100%;
         }
+
         .chart-loading {
             display: flex;
             align-items: center;
@@ -504,6 +540,7 @@
             width: 200px;
             margin: 0 auto;
         }
+
         .donut-center {
             position: absolute;
             top: 50%;
@@ -511,10 +548,12 @@
             transform: translate(-50%, -50%);
             text-align: center;
         }
+
         .donut-center .value {
             font-size: 24px;
             font-weight: 700;
         }
+
         .donut-center .label {
             font-size: 12px;
             color: var(--text-gray);
@@ -527,9 +566,7 @@
         }
 
         /* Revenue List */
-        .revenue-list {
-            list-style: none;
-        }
+        .revenue-list { list-style: none; }
 
         .revenue-item {
             display: flex;
@@ -539,9 +576,7 @@
             border-bottom: 1px solid var(--border);
         }
 
-        .revenue-item:last-child {
-            border-bottom: none;
-        }
+        .revenue-item:last-child { border-bottom: none; }
 
         .revenue-plan {
             display: flex;
@@ -558,72 +593,64 @@
             justify-content: center;
         }
 
-        .revenue-plan .icon.free {
-            background: rgba(107, 114, 128, 0.1);
-            color: #6B7280;
+        .revenue-plan .icon.free { background: rgba(107, 114, 128, 0.1); color: #6B7280; }
+        .revenue-plan .icon.plus { background: rgba(59, 130, 246, 0.1); color: #3B82F6; }
+        .revenue-plan .icon.pro { background: rgba(139, 92, 246, 0.1); color: #8B5CF6; }
+
+        .revenue-plan h4 { font-size: 15px; font-weight: 600; }
+        .revenue-plan span { font-size: 13px; color: var(--text-gray); }
+
+        .revenue-amount { text-align: right; }
+        .revenue-amount .amount { font-size: 18px; font-weight: 700; color: var(--text-dark); }
+        .revenue-amount .count { font-size: 13px; color: var(--text-gray); }
+
+        /* Metrics Cards */
+        .metric-card {
+            background: var(--bg-white);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            text-align: center;
         }
 
-        .revenue-plan .icon.basic {
-            background: rgba(59, 130, 246, 0.1);
-            color: #3B82F6;
-        }
-
-        .revenue-plan .icon.pro {
-            background: rgba(139, 92, 246, 0.1);
-            color: #8B5CF6;
-        }
-
-        .revenue-plan .icon.enterprise {
-            background: rgba(255, 107, 53, 0.1);
-            color: var(--primary);
-        }
-
-        .revenue-plan h4 {
-            font-size: 15px;
-            font-weight: 600;
-        }
-
-        .revenue-plan span {
-            font-size: 13px;
-            color: var(--text-gray);
-        }
-
-        .revenue-amount {
-            text-align: right;
-        }
-
-        .revenue-amount .amount {
-            font-size: 18px;
-            font-weight: 700;
+        .metric-card .metric-value {
+            font-size: 32px;
+            font-weight: 800;
             color: var(--text-dark);
+            margin-bottom: 4px;
         }
 
-        .revenue-amount .count {
+        .metric-card .metric-label {
             font-size: 13px;
             color: var(--text-gray);
+            margin-bottom: 8px;
         }
 
-        /* Responsive */
-        @media (max-width: 1200px) {
-            .admin-stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .charts-grid {
-                grid-template-columns: 1fr;
-            }
+        .metric-card .metric-trend {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            display: inline-block;
         }
 
-        @media (max-width: 768px) {
-            .admin-sidebar {
-                transform: translateX(-100%);
-            }
-            .admin-main {
-                margin-left: 0;
-            }
-            .admin-stats {
-                grid-template-columns: 1fr;
-            }
+        .metric-trend.up { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+        .metric-trend.down { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
+
+        /* Sample Data Banner */
+        .sample-data-banner {
+            background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+            border: 1px solid #F59E0B;
+            border-radius: 8px;
+            padding: 12px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            color: #92400E;
         }
+
+        .sample-data-banner.hidden { display: none; }
 
         /* Loading overlay */
         .loading-overlay {
@@ -639,9 +666,7 @@
             z-index: 1000;
         }
 
-        .loading-overlay.active {
-            display: flex;
-        }
+        .loading-overlay.active { display: flex; }
 
         .loading-spinner {
             width: 40px;
@@ -651,6 +676,327 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Finance specific */
+        .finance-highlight {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+            padding: 24px;
+            border-radius: var(--radius);
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .finance-highlight .amount {
+            font-size: 48px;
+            font-weight: 800;
+        }
+
+        .finance-highlight .label {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .admin-stats { grid-template-columns: repeat(2, 1fr); }
+            .charts-grid { grid-template-columns: 1fr; }
+            .charts-grid-3 { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .admin-sidebar { transform: translateX(-100%); }
+            .admin-main { margin-left: 0; }
+            .admin-stats { grid-template-columns: 1fr; }
+        }
+
+        /* Plans Grid */
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        .plan-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .plan-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+
+        .plan-card.is-default {
+            border-color: var(--primary);
+        }
+
+        .plan-card.is-inactive {
+            opacity: 0.6;
+        }
+
+        .plan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .plan-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--secondary);
+        }
+
+        .plan-type {
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .plan-type.type-free { background: #6B7280; }
+        .plan-type.type-basic { background: #3B82F6; }
+        .plan-type.type-standard { background: #8B5CF6; }
+        .plan-type.type-premium { background: #F59E0B; }
+        .plan-type.type-enterprise { background: #EF4444; }
+
+        .plan-description {
+            color: var(--text-gray);
+            font-size: 14px;
+            margin-bottom: 16px;
+            min-height: 40px;
+        }
+
+        .plan-price {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 16px;
+        }
+
+        .plan-price span {
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--text-gray);
+        }
+
+        .plan-limits {
+            background: var(--bg-gray);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .plan-limit-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #E5E7EB;
+            font-size: 14px;
+        }
+
+        .plan-limit-item:last-child {
+            border-bottom: none;
+        }
+
+        .plan-limit-label {
+            color: var(--text-gray);
+        }
+
+        .plan-limit-value {
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        .plan-limit-value.unlimited {
+            color: #10B981;
+        }
+
+        .plan-features {
+            margin-bottom: 16px;
+        }
+
+        .plan-feature {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+
+        .plan-feature .icon {
+            font-size: 16px;
+        }
+
+        .plan-feature.enabled .icon { color: #10B981; }
+        .plan-feature.disabled { color: #9CA3AF; }
+
+        .plan-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #E5E7EB;
+        }
+
+        .plan-actions .btn {
+            flex: 1;
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .modal-header h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--secondary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-gray);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--secondary);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #D1D5DB;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: var(--bg-gray);
+            border-radius: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #E5E7EB;
+        }
+
+        .modal-actions .btn {
+            flex: 1;
+            padding: 12px;
+        }
+
+        .default-badge {
+            position: absolute;
+            top: -8px;
+            right: 16px;
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge.active { background: #D1FAE5; color: #065F46; }
+        .status-badge.inactive { background: #FEE2E2; color: #991B1B; }
+        .status-badge.archived { background: #F3F4F6; color: #6B7280; }
     </style>
 </head>
 <body>
@@ -670,6 +1016,9 @@
                 <a href="#users" class="nav-item" data-tab="users">
                     <i>👥</i> Người dùng
                 </a>
+                <a href="#plans" class="nav-item" data-tab="plans">
+                    <i>📦</i> Gói dịch vụ
+                </a>
                 <a href="#subscriptions" class="nav-item" data-tab="subscriptions">
                     <i>📋</i> Đăng ký
                 </a>
@@ -681,6 +1030,9 @@
                 </a>
                 <a href="#logs" class="nav-item" data-tab="logs">
                     <i>📝</i> Nhật ký
+                </a>
+                <a href="#audio" class="nav-item" data-tab="audio">
+                    <i>🎵</i> Audio
                 </a>
             </nav>
             <div style="padding: 24px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto;">
@@ -703,34 +1055,41 @@
 
             <!-- Dashboard Tab -->
             <div id="dashboard" class="tab-panel active">
-                <div class="admin-stats" id="stats-grid">
-                    <div class="stat-card">
+                <!-- Sample Data Banner -->
+                <div id="sampleBanner" class="sample-data-banner">
+                    <span>ℹ️</span>
+                    <span>Đang hiển thị <strong>dữ liệu mẫu</strong> vì chưa có dữ liệu thực tế. Dữ liệu sẽ tự động cập nhật khi có người dùng.</span>
+                </div>
+
+                <!-- Main Stats -->
+                <div class="admin-stats">
+                    <div class="stat-card animate-in">
                         <div class="stat-card-header">
-                            <h3>Tổng người dùng</h3>
+                            <h3 class="tooltip" data-tooltip="Tổng số người dùng đã đăng ký">Tổng người dùng</h3>
                             <div class="icon" style="background: rgba(255,107,53,0.1); color: var(--primary);">👥</div>
                         </div>
                         <div class="value" id="stat-total-users">-</div>
                         <div class="change positive" id="stat-new-users">+0 người tháng này</div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card animate-in">
                         <div class="stat-card-header">
-                            <h3>Người dùng trả phí</h3>
+                            <h3 class="tooltip" data-tooltip="Người dùng đã nâng cấp lên Plus/Pro">Người dùng trả phí</h3>
                             <div class="icon" style="background: rgba(16,185,129,0.1); color: #10B981;">💎</div>
                         </div>
                         <div class="value" id="stat-paid-users">-</div>
                         <div class="change" id="stat-paid-percent">0% tổng người dùng</div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card animate-in">
                         <div class="stat-card-header">
-                            <h3>Phiên hoạt động</h3>
+                            <h3 class="tooltip" data-tooltip="Số phiên đang hoạt động">Phiên hoạt động</h3>
                             <div class="icon" style="background: rgba(59,130,246,0.1); color: #3B82F6;">🔐</div>
                         </div>
                         <div class="value" id="stat-active-sessions">-</div>
                         <div class="change">Đang hoạt động</div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card animate-in">
                         <div class="stat-card-header">
-                            <h3>Lượt sử dụng tháng</h3>
+                            <h3 class="tooltip" data-tooltip="Tổng lượt TTS trong tháng">Lượt TTS tháng</h3>
                             <div class="icon" style="background: rgba(139,92,246,0.1); color: #8B5CF6;">🎯</div>
                         </div>
                         <div class="value" id="stat-usage-month">-</div>
@@ -738,12 +1097,12 @@
                     </div>
                 </div>
 
-                <!-- Charts -->
+                <!-- Charts Row 1: Users & Distribution -->
                 <div class="charts-grid">
-                    <div class="chart-card">
+                    <div class="chart-card animate-in" style="animation-delay: 0.2s;">
                         <div class="chart-header">
-                            <h3>Người dùng mới (30 ngày)</h3>
-                            <select id="userChartRange" onchange="updateUserChart()" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px;">
+                            <h3>📈 Người dùng mới đăng ký</h3>
+                            <select id="userChartRange" onchange="updateUserChart()" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">
                                 <option value="7">7 ngày</option>
                                 <option value="14">14 ngày</option>
                                 <option value="30" selected>30 ngày</option>
@@ -753,27 +1112,79 @@
                             <canvas id="userChart"></canvas>
                         </div>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card animate-in" style="animation-delay: 0.3s;">
                         <div class="chart-header">
-                            <h3>Phân bố người dùng theo gói</h3>
+                            <h3>👥 Phân bố theo gói dịch vụ</h3>
                         </div>
-                        <div class="donut-wrapper">
-                            <canvas id="userDistChart"></canvas>
-                            <div class="donut-center">
-                                <div class="value" id="totalUsersCount">-</div>
-                                <div class="label">Tổng user</div>
+                        <div style="display: flex; align-items: center; gap: 24px;">
+                            <div class="donut-wrapper">
+                                <canvas id="userDistChart"></canvas>
+                                <div class="donut-center">
+                                    <div class="value" id="totalUsersCount">-</div>
+                                    <div class="label">Tổng user</div>
+                                </div>
                             </div>
+                            <div id="planLegend" style="flex: 1;"></div>
                         </div>
-                        <div id="planLegend" style="margin-top: 16px; text-align: center;"></div>
+                    </div>
+                </div>
+
+                <!-- Charts Row 2: Usage & Metrics -->
+                <div class="charts-grid">
+                    <div class="chart-card animate-in" style="animation-delay: 0.4s;">
+                        <div class="chart-header">
+                            <h3>🔊 Lượt sử dụng TTS</h3>
+                            <select id="usageChartRange" onchange="updateUsageChart()" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">
+                                <option value="7">7 ngày</option>
+                                <option value="14">14 ngày</option>
+                                <option value="30" selected>30 ngày</option>
+                            </select>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="usageChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card animate-in" style="animation-delay: 0.5s;">
+                        <div class="chart-header">
+                            <h3>📊 Doanh thu theo gói</h3>
+                        </div>
+                        <div class="chart-wrapper" style="height: 200px;">
+                            <canvas id="revenueByPlanChart"></canvas>
+                        </div>
+                        <div id="revenueByPlanLegend" style="margin-top: 16px; display: flex; justify-content: center; gap: 24px;"></div>
+                    </div>
+                </div>
+
+                <!-- Metrics Row -->
+                <div class="charts-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="metric-card animate-in" style="animation-delay: 0.5s;">
+                        <div class="metric-value" id="metric-arpu">$0</div>
+                        <div class="metric-label">ARPU</div>
+                        <div class="metric-trend up" id="metric-arpu-trend">Doanh thu/user</div>
+                    </div>
+                    <div class="metric-card animate-in" style="animation-delay: 0.6s;">
+                        <div class="metric-value" id="metric-mrr">$0</div>
+                        <div class="metric-label">MRR</div>
+                        <div class="metric-trend up" id="metric-mrr-trend">Doanh thu tháng</div>
+                    </div>
+                    <div class="metric-card animate-in" style="animation-delay: 0.7s;">
+                        <div class="metric-value" id="metric-churn">0%</div>
+                        <div class="metric-label">Churn Rate</div>
+                        <div class="metric-trend down" id="metric-churn-trend">Tỷ lệ rời bỏ</div>
+                    </div>
+                    <div class="metric-card animate-in" style="animation-delay: 0.8s;">
+                        <div class="metric-value" id="metric-conversion">0%</div>
+                        <div class="metric-label">Conversion</div>
+                        <div class="metric-trend up" id="metric-conversion-trend">Free → Paid</div>
                     </div>
                 </div>
 
                 <!-- Revenue Chart -->
-                <div class="chart-card" style="margin-bottom: 24px;">
+                <div class="chart-card animate-in" style="animation-delay: 0.9s; margin-top: 24px;">
                     <div class="chart-header">
-                        <h3>Doanh thu theo thời gian</h3>
+                        <h3>💰 Doanh thu theo thời gian</h3>
                         <div style="display: flex; gap: 8px;">
-                            <select id="revenueChartRange" onchange="updateRevenueChart()" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px;">
+                            <select id="revenueChartRange" onchange="updateRevenueChart()" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">
                                 <option value="7">7 ngày</option>
                                 <option value="30" selected>30 ngày</option>
                                 <option value="90">90 ngày</option>
@@ -782,6 +1193,26 @@
                     </div>
                     <div class="revenue-chart-wrapper">
                         <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plans Tab -->
+            <div id="plans" class="tab-panel">
+                <div class="admin-table-container">
+                    <div class="table-toolbar">
+                        <h3>Quản lý gói dịch vụ</h3>
+                        <div class="table-actions">
+                            <button class="btn btn-primary" onclick="openPlanModal()">
+                                <i>➕</i> Thêm gói mới
+                            </button>
+                            <button class="btn btn-secondary" onclick="initDefaultPlans()">
+                                <i>🔄</i> Khởi tạo mặc định
+                            </button>
+                        </div>
+                    </div>
+                    <div id="plans-grid" class="plans-grid">
+                        <!-- Plans will be loaded here -->
                     </div>
                 </div>
             </div>
@@ -799,9 +1230,8 @@
                             <select class="filter-select" id="user-plan-filter">
                                 <option value="">Tất cả gói</option>
                                 <option value="free">Free</option>
-                                <option value="basic">Basic</option>
+                                <option value="plus">Plus</option>
                                 <option value="pro">Pro</option>
-                                <option value="enterprise">Enterprise</option>
                             </select>
                             <select class="filter-select" id="user-verified-filter">
                                 <option value="">Tất cả</option>
@@ -833,8 +1263,7 @@
                         <div class="pagination-info" id="users-pagination-info">
                             Hiển thị 0 - 0 của 0
                         </div>
-                        <div class="pagination-btns" id="users-pagination-btns">
-                        </div>
+                        <div class="pagination-btns" id="users-pagination-btns"></div>
                     </div>
                 </div>
             </div>
@@ -848,9 +1277,8 @@
                             <select class="filter-select" id="sub-plan-filter">
                                 <option value="">Tất cả gói</option>
                                 <option value="free">Free</option>
-                                <option value="basic">Basic</option>
+                                <option value="plus">Plus</option>
                                 <option value="pro">Pro</option>
-                                <option value="enterprise">Enterprise</option>
                             </select>
                             <select class="filter-select" id="sub-status-filter">
                                 <option value="">Tất cả trạng thái</option>
@@ -885,8 +1313,7 @@
                         <div class="pagination-info" id="subscriptions-pagination-info">
                             Hiển thị 0 - 0 của 0
                         </div>
-                        <div class="pagination-btns" id="subscriptions-pagination-btns">
-                        </div>
+                        <div class="pagination-btns" id="subscriptions-pagination-btns"></div>
                     </div>
                 </div>
             </div>
@@ -931,70 +1358,149 @@
                         <div class="pagination-info" id="payments-pagination-info">
                             Hiển thị 0 - 0 của 0
                         </div>
-                        <div class="pagination-btns" id="payments-pagination-btns">
-                        </div>
+                        <div class="pagination-btns" id="payments-pagination-btns"></div>
                     </div>
                 </div>
             </div>
 
             <!-- Finance Tab -->
             <div id="finance" class="tab-panel">
-                <div class="admin-stats">
-                    <div class="stat-card">
+                <!-- Revenue Summary Cards -->
+                <div class="admin-stats" style="margin-bottom: 24px;">
+                    <div class="stat-card animate-in" style="background: linear-gradient(135deg, #10B981, #059669); color: white;">
                         <div class="stat-card-header">
-                            <h3>Tổng doanh thu</h3>
-                            <div class="icon" style="background: rgba(16,185,129,0.1); color: #10B981;">💰</div>
+                            <h3 style="color: rgba(255,255,255,0.8);">Doanh thu 30 ngày</h3>
+                            <div class="icon" style="background: rgba(255,255,255,0.2); color: white;">💰</div>
                         </div>
-                        <div class="value" id="finance-total-revenue">$0</div>
-                        <div class="change">Ước tính tháng này</div>
+                        <div class="value" id="finance-total-30d" style="color: white;">0đ</div>
+                        <div class="change" id="finance-growth" style="color: rgba(255,255,255,0.8);">Đang tải...</div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card animate-in">
                         <div class="stat-card-header">
-                            <h3>Đăng ký hoạt động</h3>
+                            <h3>Tổng giao dịch</h3>
                             <div class="icon" style="background: rgba(59,130,246,0.1); color: #3B82F6;">📋</div>
                         </div>
-                        <div class="value" id="finance-active-subs">0</div>
-                        <div class="change">Đang sử dụng</div>
+                        <div class="value" id="finance-total-orders">0</div>
+                        <div class="change" id="finance-pending" style="color: #F59E0B;">0 chờ duyệt</div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card animate-in">
                         <div class="stat-card-header">
-                            <h3>Người dùng miễn phí</h3>
-                            <div class="icon" style="background: rgba(107,114,128,0.1); color: #6B7280;">👤</div>
+                            <h3>Doanh thu Plus</h3>
+                            <div class="icon" style="background: rgba(59,130,246,0.1); color: #3B82F6;">⭐</div>
                         </div>
-                        <div class="value" id="finance-free-users">0</div>
-                        <div class="change">Không tạo doanh thu</div>
+                        <div class="value" id="finance-plus-revenue">0đ</div>
+                        <div class="change" id="finance-plus-count">0 giao dịch</div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card animate-in">
                         <div class="stat-card-header">
-                            <h3>Người dùng trả phí</h3>
-                            <div class="icon" style="background: rgba(255,107,53,0.1); color: var(--primary);">💎</div>
+                            <h3>Doanh thu Pro</h3>
+                            <div class="icon" style="background: rgba(139,92,246,0.1); color: #8B5CF6;">👑</div>
                         </div>
-                        <div class="value" id="finance-paid-users">0</div>
-                        <div class="change">Tạo doanh thu</div>
+                        <div class="value" id="finance-pro-revenue">0đ</div>
+                        <div class="change" id="finance-pro-count">0 giao dịch</div>
                     </div>
                 </div>
 
-                <div class="admin-table-container">
+                <!-- Revenue Charts Row -->
+                <div class="charts-grid" style="grid-template-columns: 2fr 1fr;">
+                    <div class="chart-card animate-in">
+                        <div class="chart-header">
+                            <h3>📈 Doanh thu theo ngày</h3>
+                            <select id="financeChartRange" onchange="updateFinanceCharts()" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">
+                                <option value="7">7 ngày</option>
+                                <option value="30" selected>30 ngày</option>
+                                <option value="90">90 ngày</option>
+                            </select>
+                        </div>
+                        <div class="chart-wrapper" style="height: 300px;">
+                            <canvas id="financeTrendChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card animate-in">
+                        <div class="chart-header">
+                            <h3>📊 Theo gói dịch vụ</h3>
+                        </div>
+                        <div class="chart-wrapper" style="height: 300px;">
+                            <canvas id="financeByPlanChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Revenue by Payment Method -->
+                <div class="chart-card animate-in" style="margin-top: 24px;">
+                    <div class="chart-header">
+                        <h3>💳 Doanh thu theo phương thức thanh toán</h3>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px;" id="payment-method-cards">
+                        <div style="background: var(--bg-gray); padding: 16px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 24px; margin-bottom: 8px;">💵</div>
+                            <div style="font-weight: 600;" id="method-cash">0đ</div>
+                            <div style="font-size: 12px; color: var(--text-gray);">Tiền mặt</div>
+                        </div>
+                        <div style="background: var(--bg-gray); padding: 16px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 24px; margin-bottom: 8px;">🏦</div>
+                            <div style="font-weight: 600;" id="method-banking">0đ</div>
+                            <div style="font-size: 12px; color: var(--text-gray);">Chuyển khoản</div>
+                        </div>
+                        <div style="background: var(--bg-gray); padding: 16px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 24px; margin-bottom: 8px;">💳</div>
+                            <div style="font-weight: 600;" id="method-vnpay">0đ</div>
+                            <div style="font-size: 12px; color: var(--text-gray);">VNPay</div>
+                        </div>
+                        <div style="background: var(--bg-gray); padding: 16px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 24px; margin-bottom: 8px;">📱</div>
+                            <div style="font-weight: 600;" id="method-momo">0đ</div>
+                            <div style="font-size: 12px; color: var(--text-gray);">MoMo</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transactions Table -->
+                <div class="admin-table-container" style="margin-top: 24px;">
                     <div class="table-toolbar">
-                        <h3>Lịch sử doanh thu</h3>
+                        <h3>📝 Lịch sử giao dịch</h3>
+                        <div class="table-actions">
+                            <select class="filter-select" id="tx-status-filter" onchange="loadFinanceTransactions()">
+                                <option value="">Tất cả trạng thái</option>
+                                <option value="pending">Chờ duyệt</option>
+                                <option value="approved">Đã duyệt</option>
+                                <option value="completed">Hoàn thành</option>
+                                <option value="rejected">Từ chối</option>
+                            </select>
+                            <select class="filter-select" id="tx-plan-filter" onchange="loadFinanceTransactions()">
+                                <option value="">Tất cả gói</option>
+                                <option value="plus">Plus</option>
+                                <option value="pro">Pro</option>
+                            </select>
+                        </div>
                     </div>
                     <table class="admin-table">
                         <thead>
                             <tr>
-                                <th>Ngày</th>
-                                <th>Người dùng mới</th>
-                                <th>Free</th>
-                                <th>Paid</th>
+                                <th>Mã giao dịch</th>
+                                <th>Khách hàng</th>
+                                <th>Gói</th>
+                                <th>Số tiền</th>
+                                <th>Phương thức</th>
+                                <th>Trạng thái</th>
+                                <th>Ngày tạo</th>
+                                <th>Ngày duyệt</th>
                             </tr>
                         </thead>
-                        <tbody id="revenue-history-body">
+                        <tbody id="transactions-table-body">
                             <tr>
-                                <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-gray);">
+                                <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-gray);">
                                     Đang tải...
                                 </td>
                             </tr>
                         </tbody>
                     </table>
+                    <div class="pagination">
+                        <div class="pagination-info" id="tx-pagination-info">
+                            Hiển thị 0 - 0 của 0
+                        </div>
+                        <div class="pagination-btns" id="tx-pagination-btns"></div>
+                    </div>
                 </div>
             </div>
 
@@ -1033,32 +1539,314 @@
                         <div class="pagination-info" id="logs-pagination-info">
                             Hiển thị 0 - 0 của 0
                         </div>
-                        <div class="pagination-btns" id="logs-pagination-btns">
+                        <div class="pagination-btns" id="logs-pagination-btns"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audio History Tab -->
+            <div id="audio" class="tab-panel">
+                <!-- Stats Cards -->
+                <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
+                    <div class="stat-card">
+                        <div class="stat-label">Tổng Audio</div>
+                        <div class="stat-value" id="audio-total-count">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Hôm nay</div>
+                        <div class="stat-value" id="audio-today-count">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Tổng Dung lượng</div>
+                        <div class="stat-value" id="audio-total-size">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Tổng Thời lượng</div>
+                        <div class="stat-value" id="audio-total-duration">-</div>
+                    </div>
+                </div>
+
+                <!-- Filter -->
+                <div class="admin-table-container">
+                    <div class="table-toolbar">
+                        <h3>Lịch sử Audio</h3>
+                        <div class="table-actions">
+                            <select class="filter-select" id="audio-voice-filter">
+                                <option value="">Tất cả giọng</option>
+                                <option value="Tuyen">Tuyên</option>
+                                <option value="Vinh">Xuân Vĩnh</option>
+                                <option value="Doan">Thục Đoan</option>
+                                <option value="Ly">Trúc Ly</option>
+                            </select>
+                            <input type="text" id="audio-user-filter" placeholder="Lọc theo email..." class="filter-input">
                         </div>
+                    </div>
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Người dùng</th>
+                                <th>Giọng</th>
+                                <th>Thời lượng</th>
+                                <th>Dung lượng</th>
+                                <th>Ngày tạo</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audio-table-body">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-gray);">
+                                    Đang tải...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="pagination">
+                        <div class="pagination-info" id="audio-pagination-info">
+                            Hiển thị 0 - 0 của 0
+                        </div>
+                        <div class="pagination-btns" id="audio-pagination-btns"></div>
                     </div>
                 </div>
             </div>
         </main>
+
+        <!-- User Quota Modal -->
+        <div id="userQuotaModal" class="modal">
+            <div class="modal-content" style="max-width: 700px;">
+                <div class="modal-header">
+                    <h3 id="quotaModalTitle">Chi tiết người dùng</h3>
+                    <button class="modal-close" onclick="closeQuotaModal()">&times;</button>
+                </div>
+                <div class="modal-body" id="quotaModalBody">
+                    <div style="text-align: center; padding: 40px;">Đang tải...</div>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <style>
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+        .modal-header h3 { font-size: 18px; font-weight: 600; margin: 0; }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-gray);
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+        }
+        .modal-close:hover { background: var(--bg-gray); }
+        .modal-body { padding: 24px; }
+        .quota-section { margin-bottom: 24px; }
+        .quota-section:last-child { margin-bottom: 0; }
+        .quota-section h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-dark);
+        }
+        .quota-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        .quota-card { background: var(--bg-gray); border-radius: 8px; padding: 16px; }
+        .quota-card-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
+        .quota-card-title { font-size: 13px; color: var(--text-gray); }
+        .quota-card-value { font-size: 24px; font-weight: 700; color: var(--text-dark); }
+        .quota-progress { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 8px; }
+        .quota-progress-bar { height: 100%; border-radius: 4px; transition: width 0.3s ease; }
+        .quota-progress-bar.low { background: #10B981; }
+        .quota-progress-bar.medium { background: #F59E0B; }
+        .quota-progress-bar.high { background: #EF4444; }
+        .plan-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .plan-badge.free { background: rgba(107, 114, 128, 0.1); color: #6B7280; }
+        .plan-badge.plus { background: rgba(59, 130, 246, 0.1); color: #3B82F6; }
+        .plan-badge.pro { background: rgba(139, 92, 246, 0.1); color: #8B5CF6; }
+        .user-info-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: var(--bg-gray);
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+        .user-info-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .user-info-details h4 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+        .user-info-details p { color: var(--text-gray); font-size: 14px; margin: 0; }
+        .expiry-warning {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #EF4444;
+            border-radius: 8px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            color: #EF4444;
+            font-size: 14px;
+        }
+        .expiry-warning.hidden { display: none; }
+        .subscription-info {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .subscription-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .subscription-row:last-child { border-bottom: none; }
+        .subscription-label { color: var(--text-gray); font-size: 14px; }
+        .subscription-value { font-weight: 600; font-size: 14px; }
+        .free-limits-info {
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        .free-limits-info h5 { font-size: 14px; font-weight: 600; color: #3B82F6; margin-bottom: 12px; }
+        .free-limit-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 14px;
+        }
+    </style>
+
     <script>
+        console.log('[Admin] Script loading...');
+        
         const API_BASE = 'http://localhost:8000/api/admin';
         
         // State
         let currentTab = 'dashboard';
         let usersPage = 1;
         let subsPage = 1;
+        let paymentsPage = 1;
         let logsPage = 1;
         const pageSize = 20;
+        let hasRealData = false;
 
         // Chart instances
         let userChartInstance = null;
         let userDistChartInstance = null;
         let revenueChartInstance = null;
+        let usageChartInstance = null;
+        let revenueByPlanChartInstance = null;
+        let financeRevenueChartInstance = null;
+        let financeTrendChartInstance = null;
+
+        // Sample data
+        const SAMPLE_DATA = {
+            total_users: 156,
+            new_users_this_month: 23,
+            paid_users: 42,
+            active_sessions: 38,
+            usage_this_month: 1847,
+            free_users: 114,
+            plus_users: 28,
+            pro_users: 14,
+            arpu: 2.45,
+            mrr: 2450,
+            arr: 29400,
+            churn_rate: 3.2,
+            conversion_rate: 26.9,
+            revenue_by_plan: { free: 0, plus: 1400, pro: 1050 },
+            usage_stats: {
+                summary: {
+                    total_calls: 1847,
+                    total_chars: 92350,
+                    total_duration_seconds: 9235,
+                    avg_calls_per_day: 61.6
+                }
+            }
+        };
+
+        // Generate sample chart data
+        function generateSampleData(days) {
+            const labels = [];
+            const userData = [];
+            const usageData = [];
+            const revenueData = [];
+            
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                labels.push(date.toISOString().split('T')[0]);
+                
+                // Random but realistic data
+                userData.push(Math.floor(Math.random() * 8) + 2);
+                usageData.push(Math.floor(Math.random() * 100) + 20);
+                revenueData.push(Math.floor(Math.random() * 200) + 50);
+            }
+            
+            return { labels, userData, usageData, revenueData };
+        }
 
         // Tab Navigation
         document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
             item.addEventListener('click', (e) => {
+                e.preventDefault();
                 const tab = e.currentTarget.dataset.tab;
                 switchTab(tab);
             });
@@ -1067,29 +1855,28 @@
         function switchTab(tab) {
             currentTab = tab;
             
-            // Update nav
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
             });
             document.querySelector(`[data-tab="${tab}"]`)?.classList.add('active');
             
-            // Update tabs
             document.querySelectorAll('.tab-panel').forEach(panel => {
                 panel.classList.remove('active');
             });
             document.getElementById(tab)?.classList.add('active');
             
-            // Update title
             const titles = {
                 dashboard: 'Dashboard',
                 users: 'Quản lý người dùng',
+                plans: 'Quản lý gói dịch vụ',
                 subscriptions: 'Quản lý đăng ký',
                 finance: 'Tài chính',
-                logs: 'Nhật ký hoạt động'
+                logs: 'Nhật ký hoạt động',
+                payments: 'Quản lý thanh toán',
+                audio: 'Lịch sử Audio'
             };
             document.getElementById('page-title').textContent = titles[tab] || 'Admin';
             
-            // Load data
             loadData(tab);
         }
 
@@ -1100,6 +1887,9 @@
                     break;
                 case 'users':
                     await loadUsers();
+                    break;
+                case 'plans':
+                    await loadPlans();
                     break;
                 case 'subscriptions':
                     await loadSubscriptions();
@@ -1113,12 +1903,16 @@
                 case 'logs':
                     await loadLogs();
                     break;
+                case 'audio':
+                    await loadAudioHistory();
+                    break;
             }
         }
 
         async function api(endpoint, options = {}) {
             try {
                 const token = localStorage.getItem('auth_token');
+                console.log('[Admin API] Calling:', endpoint, 'Token:', token ? 'yes' : 'no');
                 const res = await fetch(`${API_BASE}${endpoint}`, {
                     ...options,
                     headers: {
@@ -1127,6 +1921,7 @@
                         ...options.headers
                     }
                 });
+                console.log('[Admin API] Response:', res.status);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 return await res.json();
             } catch (e) {
@@ -1137,81 +1932,89 @@
 
         // Dashboard
         async function loadDashboard() {
+            console.log('[Admin] Loading dashboard...');
             const stats = await api('/dashboard');
-            if (!stats) return;
-
-            document.getElementById('stat-total-users').textContent = stats.total_users || 0;
-            document.getElementById('stat-new-users').textContent = `+${stats.new_users_this_month} người tháng này`;
-            document.getElementById('stat-paid-users').textContent = stats.paid_users || 0;
-            document.getElementById('stat-paid-percent').textContent = `${((stats.paid_users / stats.total_users) * 100).toFixed(1)}% tổng người dùng`;
-            document.getElementById('stat-active-sessions').textContent = stats.active_sessions || 0;
-            document.getElementById('stat-usage-month').textContent = stats.usage_this_month || 0;
-
-            // Load finance stats
-            const finance = await api('/finance/stats');
-            if (finance) {
-                document.getElementById('finance-total-revenue').textContent = `$${finance.total_revenue.toFixed(2)}`;
-                document.getElementById('finance-active-subs').textContent = finance.active_subscriptions;
-                document.getElementById('finance-free-users').textContent = finance.free_users;
-                document.getElementById('finance-paid-users').textContent = finance.paid_users;
+            const metrics = await api('/analytics/metrics');
+            console.log('[Admin] Stats:', stats);
+            console.log('[Admin] Metrics:', metrics);
+            
+            let data = SAMPLE_DATA;
+            hasRealData = false;
+            
+            if (stats && stats.total_users > 0) {
+                data = {
+                    total_users: stats.total_users || 0,
+                    new_users_this_month: stats.new_users_this_month || 0,
+                    paid_users: stats.paid_users || 0,
+                    active_sessions: stats.active_sessions || 0,
+                    usage_this_month: stats.usage_this_month || 0,
+                    free_users: stats.free_users || 0,
+                    plus_users: stats.plus_users || 0,
+                    pro_users: stats.pro_users || 0
+                };
+                hasRealData = true;
+            } else {
+                console.log('[Admin] No real data, using SAMPLE_DATA');
             }
-
+            
+            if (metrics) {
+                data.arpu = metrics.arpu || 0;
+                data.mrr = metrics.mrr || 0;
+                data.arr = metrics.arr || 0;
+                data.churn_rate = metrics.churn_rate || 0;
+                data.conversion_rate = metrics.conversion_rate || 0;
+                data.revenue_by_plan = metrics.revenue_by_plan || { free: 0, plus: 0, pro: 0 };
+            }
+            
+            // Update sample banner
+            document.getElementById('sampleBanner').classList.toggle('hidden', hasRealData);
+            
+            // Update stats
+            document.getElementById('stat-total-users').textContent = data.total_users;
+            document.getElementById('stat-new-users').textContent = `+${data.new_users_this_month} người tháng này`;
+            document.getElementById('stat-paid-users').textContent = data.paid_users;
+            const percent = data.total_users > 0 ? ((data.paid_users / data.total_users) * 100).toFixed(1) : 0;
+            document.getElementById('stat-paid-percent').textContent = `${percent}% tổng người dùng`;
+            document.getElementById('stat-active-sessions').textContent = data.active_sessions;
+            document.getElementById('stat-usage-month').textContent = data.usage_this_month.toLocaleString();
+            
+            // Update metrics
+            document.getElementById('metric-arpu').textContent = `$${data.arpu}`;
+            document.getElementById('metric-mrr').textContent = `$${data.mrr.toLocaleString()}`;
+            document.getElementById('metric-churn').textContent = `${data.churn_rate}%`;
+            document.getElementById('metric-conversion').textContent = `${data.conversion_rate}%`;
+            
             // Load charts
-            loadUserChartData(30);
-            loadUserDistribution();
-            loadRevenueChart(30);
-        }
-
-        function updateRevenueList(finance) {
-            const plans = [
-                { key: 'free', name: 'Free', icon: 'free' },
-                { key: 'basic', name: 'Basic', icon: 'basic' },
-                { key: 'pro', name: 'Pro', icon: 'pro' },
-                { key: 'enterprise', name: 'Enterprise', icon: 'enterprise' }
-            ];
-
-            const html = plans.map(plan => {
-                const users = plan.key === 'free' ? finance.free_users : 
-                    (plan.key === 'basic' ? Math.floor(finance.paid_users * 0.5) : 
-                    (plan.key === 'pro' ? Math.floor(finance.paid_users * 0.35) : 
-                    Math.floor(finance.paid_users * 0.15)));
-                const revenue = finance.revenue_by_plan[plan.key] || 0;
-                
-                return `
-                    <li class="revenue-item">
-                        <div class="revenue-plan">
-                            <div class="icon ${plan.icon}">${plan.name[0]}</div>
-                            <div>
-                                <h4>${plan.name}</h4>
-                                <span>${plan.key === 'free' ? 'Miễn phí' : `$${revenue === 0 ? '9.99' : (revenue/users).toFixed(2)}/tháng`}</span>
-                            </div>
-                        </div>
-                        <div class="revenue-amount">
-                            <div class="amount">$${revenue.toFixed(2)}</div>
-                            <div class="count">${users} người</div>
-                        </div>
-                    </li>
-                `;
-            }).join('');
-
-            document.getElementById('revenue-list').innerHTML = html;
-        }
-
-        function updateUserChart() {
-            const range = document.getElementById('userChartRange')?.value || 30;
-            loadUserChartData(range);
+            const userDays = parseInt(document.getElementById('userChartRange')?.value || 30);
+            await loadUserChartData(userDays);
+            loadUserDistribution(data);
+            const usageDays = parseInt(document.getElementById('usageChartRange')?.value || 30);
+            await loadUsageChartData(usageDays);
+            loadRevenueByPlanChart(data.revenue_by_plan);
+            const revenueDays = parseInt(document.getElementById('revenueChartRange')?.value || 30);
+            await loadRevenueChart(revenueDays);
         }
 
         async function loadUserChartData(days = 30) {
-            const history = await api('/finance/revenue?days=' + days);
-            if (!history || !history.history) return;
+            const data = await api(`/analytics/users-by-date?days=${days}`);
+            
+            let chartData;
+            if (data && data.history && data.history.length > 0) {
+                chartData = {
+                    labels: data.history.map(h => h._id),
+                    data: data.history.map(h => h.count)
+                };
+            } else {
+                // Use sample data
+                const sample = generateSampleData(days);
+                chartData = {
+                    labels: sample.labels,
+                    data: sample.userData
+                };
+            }
 
             const ctx = document.getElementById('userChart');
             if (!ctx) return;
-
-            // Process data for Chart.js
-            const labels = history.history.map(h => h._id);
-            const data = history.history.map(h => h.count);
 
             if (userChartInstance) {
                 userChartInstance.destroy();
@@ -1220,45 +2023,64 @@
             userChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: chartData.labels,
                     datasets: [{
                         label: 'Người dùng mới',
-                        data: data,
+                        data: chartData.data,
                         borderColor: '#FF6B35',
                         backgroundColor: 'rgba(255, 107, 53, 0.1)',
                         fill: true,
                         tension: 0.4,
                         pointRadius: 4,
-                        pointHoverRadius: 6
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#FF6B35'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            padding: 12,
+                            cornerRadius: 8
+                        }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: { stepSize: 1 }
+                            ticks: { stepSize: 1 },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        x: {
+                            grid: { display: false }
                         }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
                     }
                 }
             });
         }
 
-        async function loadUserDistribution() {
-            const stats = await api('/dashboard');
-            if (!stats) return;
+        function updateUserChart() {
+            const range = document.getElementById('userChartRange')?.value || 30;
+            loadUserChartData(parseInt(range));
+        }
 
+        function loadUserDistribution(data) {
             const ctx = document.getElementById('userDistChart');
             if (!ctx) return;
 
-            const freeUsers = stats.free_users || 0;
-            const plusUsers = stats.plus_users || 0;
-            const proUsers = stats.pro_users || 0;
-            const total = stats.total_users || 1;
+            const freeUsers = data.free_users || 0;
+            const plusUsers = data.plus_users || 0;
+            const proUsers = data.pro_users || 0;
+            const total = data.total_users || 1;
 
             document.getElementById('totalUsersCount').textContent = total;
 
@@ -1281,52 +2103,71 @@
                     maintainAspectRatio: true,
                     cutout: '70%',
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const percent = ((value / total) * 100).toFixed(1);
+                                    return `${context.label}: ${value} (${percent}%)`;
+                                }
+                            }
+                        }
                     }
                 }
             });
 
             // Update legend
-            const legendHtml = [
-                '<span style="margin: 0 8px;"><span style="display: inline-block; width: 12px; height: 12px; background: #6B7280; border-radius: 2px;"></span> Free: ' + freeUsers + '</span>',
-                '<span style="margin: 0 8px;"><span style="display: inline-block; width: 12px; height: 12px; background: #3B82F6; border-radius: 2px;"></span> Plus: ' + plusUsers + '</span>',
-                '<span style="margin: 0 8px;"><span style="display: inline-block; width: 12px; height: 12px; background: #8B5CF6; border-radius: 2px;"></span> Pro: ' + proUsers + '</span>'
-            ].join('');
-            document.getElementById('planLegend').innerHTML = legendHtml;
+            document.getElementById('planLegend').innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="width: 12px; height: 12px; background: #6B7280; border-radius: 2px;"></span>
+                        <span>Free: ${freeUsers}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="width: 12px; height: 12px; background: #3B82F6; border-radius: 2px;"></span>
+                        <span>Plus: ${plusUsers}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="width: 12px; height: 12px; background: #8B5CF6; border-radius: 2px;"></span>
+                        <span>Pro: ${proUsers}</span>
+                    </div>
+                </div>
+            `;
         }
 
-        async function loadRevenueChart(days = 30) {
-            const data = await api('/finance/revenue?days=' + days);
-            if (!data || !data.history) return;
-
-            const ctx = document.getElementById('revenueChart');
-            if (!ctx) return;
-
-            // Group by date and sum
-            const revenueByDate = {};
-            data.history.forEach(h => {
-                if (!revenueByDate[h._id]) {
-                    revenueByDate[h._id] = { revenue: 0, users: 0 };
-                }
-                revenueByDate[h._id].users += h.paid || 0;
-            });
-
-            // Calculate mock revenue (in real app, this would come from payment records)
-            const labels = Object.keys(revenueByDate);
-            const revenueData = labels.map(date => revenueByDate[date].users * 10); // Mock: $10 per paid user
-
-            if (revenueChartInstance) {
-                revenueChartInstance.destroy();
+        async function loadUsageChartData(days = 30) {
+            const data = await api(`/analytics/usage-stats?days=${days}`);
+            
+            let chartData;
+            if (data && data.history && data.history.length > 0) {
+                chartData = {
+                    labels: data.history.map(h => h._id),
+                    data: data.history.map(h => h.total_calls)
+                };
+            } else {
+                const sample = generateSampleData(days);
+                chartData = {
+                    labels: sample.labels,
+                    data: sample.usageData
+                };
             }
 
-            revenueChartInstance = new Chart(ctx, {
+            const ctx = document.getElementById('usageChart');
+            if (!ctx) return;
+
+            if (usageChartInstance) {
+                usageChartInstance.destroy();
+            }
+
+            usageChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: labels,
+                    labels: chartData.labels,
                     datasets: [{
-                        label: 'Doanh thu ($)',
-                        data: revenueData,
-                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        label: 'Lượt TTS',
+                        data: chartData.data,
+                        backgroundColor: 'rgba(139, 92, 246, 0.8)',
                         borderRadius: 4
                     }]
                 },
@@ -1334,7 +2175,64 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            padding: 12,
+                            cornerRadius: 8
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateUsageChart() {
+            const range = document.getElementById('usageChartRange')?.value || 30;
+            loadUsageChartData(parseInt(range));
+        }
+
+        function loadRevenueByPlanChart(revenueByPlan) {
+            const ctx = document.getElementById('revenueByPlanChart');
+            if (!ctx) return;
+
+            const plus = revenueByPlan?.plus || 1400;
+            const pro = revenueByPlan?.pro || 1050;
+
+            if (revenueByPlanChartInstance) {
+                revenueByPlanChartInstance.destroy();
+            }
+
+            revenueByPlanChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Plus', 'Pro'],
+                    datasets: [{
+                        data: [plus, pro],
+                        backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(139, 92, 246, 0.8)'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `$${context.raw.toLocaleString()}`;
+                                }
+                            }
+                        }
                     },
                     scales: {
                         y: {
@@ -1343,7 +2241,93 @@
                                 callback: function(value) {
                                     return '$' + value;
                                 }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('revenueByPlanLegend').innerHTML = `
+                <div style="display: flex; gap: 24px; font-size: 14px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="width: 12px; height: 12px; background: #3B82F6; border-radius: 2px;"></span>
+                        <span>Plus: $${plus.toLocaleString()}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="width: 12px; height: 12px; background: #8B5CF6; border-radius: 2px;"></span>
+                        <span>Pro: $${pro.toLocaleString()}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadRevenueChart(days = 30) {
+            const data = await api(`/finance/revenue?days=${days}`);
+            
+            let chartData;
+            if (data && data.history && data.history.length > 0) {
+                chartData = {
+                    labels: data.history.map(h => h._id),
+                    data: data.history.map(h => h.total_amount || 0)
+                };
+            } else {
+                const sample = generateSampleData(days);
+                chartData = {
+                    labels: sample.labels,
+                    data: sample.revenueData
+                };
+            }
+
+            const ctx = document.getElementById('revenueChart');
+            if (!ctx) return;
+
+            if (revenueChartInstance) {
+                revenueChartInstance.destroy();
+            }
+
+            revenueChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: 'Doanh thu ($)',
+                        data: chartData.data,
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Doanh thu: $' + context.raw.toFixed(2);
+                                }
                             }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value;
+                                }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        x: {
+                            grid: { display: false }
                         }
                     }
                 }
@@ -1352,7 +2336,216 @@
 
         function updateRevenueChart() {
             const range = document.getElementById('revenueChartRange')?.value || 30;
-            loadRevenueChart(range);
+            loadRevenueChart(parseInt(range));
+        }
+
+        // Plans Management
+        let editingPlanId = null;
+
+        async function loadPlans() {
+            const grid = document.getElementById('plans-grid');
+            grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-gray);">Đang tải...</div>';
+
+            const data = await api('/subscription/plans?include_inactive=true');
+            if (!data || data.plans.length === 0) {
+                grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-gray);">Chưa có gói nào. Nhấn "Khởi tạo mặc định" để tạo các gói mặc định.</div>';
+                return;
+            }
+
+            grid.innerHTML = data.plans.map(plan => `
+                <div class="plan-card ${plan.is_default ? 'is-default' : ''} ${plan.status !== 'active' ? 'is-inactive' : ''}">
+                    ${plan.is_default ? '<div class="default-badge">Mặc định</div>' : ''}
+                    <div class="plan-header">
+                        <div class="plan-name">${plan.name}</div>
+                        <div class="plan-type type-${plan.plan_type}">${getPlanTypeLabel(plan.plan_type)}</div>
+                    </div>
+                    <div class="plan-description">${plan.description || 'Không có mô tả'}</div>
+                    <div class="plan-price">
+                        ${plan.pricing.monthly_price > 0 ? formatCurrency(plan.pricing.monthly_price) : 'Miễn phí'}
+                        <span>/tháng</span>
+                    </div>
+                    <div class="plan-limits">
+                        <div class="plan-limit-item">
+                            <span class="plan-limit-label">Ký tự/tháng</span>
+                            <span class="plan-limit-value ${plan.limits.max_chars_per_month === 0 ? 'unlimited' : ''}">${plan.limits.max_chars_per_month === 0 ? '∞ Không giới hạn' : formatNumber(plan.limits.max_chars_per_month)}</span>
+                        </div>
+                        <div class="plan-limit-item">
+                            <span class="plan-limit-label">Audio/ngày</span>
+                            <span class="plan-limit-value ${plan.limits.max_audio_per_day === 0 ? 'unlimited' : ''}">${plan.limits.max_audio_per_day === 0 ? '∞' : plan.limits.max_audio_per_day}</span>
+                        </div>
+                        <div class="plan-limit-item">
+                            <span class="plan-limit-label">Audio/tháng</span>
+                            <span class="plan-limit-value ${plan.limits.max_audio_per_month === 0 ? 'unlimited' : ''}">${plan.limits.max_audio_per_month === 0 ? '∞' : formatNumber(plan.limits.max_audio_per_month)}</span>
+                        </div>
+                        <div class="plan-limit-item">
+                            <span class="plan-limit-label">Độ dài văn bản</span>
+                            <span class="plan-limit-value">${formatNumber(plan.limits.max_text_length)} ký tự</span>
+                        </div>
+                        <div class="plan-limit-item">
+                            <span class="plan-limit-label">Thời lượng audio</span>
+                            <span class="plan-limit-value">${plan.limits.max_audio_duration} giây</span>
+                        </div>
+                    </div>
+                    <div class="plan-features">
+                        <div class="plan-feature ${plan.features.voice_cloning ? 'enabled' : 'disabled'}">
+                            <span class="icon">${plan.features.voice_cloning ? '✓' : '✗'}</span>
+                            Voice Cloning
+                        </div>
+                        <div class="plan-feature ${plan.features.priority_queue ? 'enabled' : 'disabled'}">
+                            <span class="icon">${plan.features.priority_queue ? '✓' : '✗'}</span>
+                            Ưu tiên xử lý
+                        </div>
+                        <div class="plan-feature ${plan.features.api_access ? 'enabled' : 'disabled'}">
+                            <span class="icon">${plan.features.api_access ? '✓' : '✌'}</span>
+                            API Access
+                        </div>
+                        <div class="plan-feature ${plan.features.batch_processing ? 'enabled' : 'disabled'}">
+                            <span class="icon">${plan.features.batch_processing ? '✓' : '✗'}</span>
+                            Xử lý hàng loạt
+                        </div>
+                    </div>
+                    <div class="plan-actions">
+                        <button class="btn btn-secondary" onclick="editPlan('${plan.id}')">Sửa</button>
+                        ${!plan.is_default ? `<button class="btn btn-danger" onclick="deletePlan('${plan.id}')">Xóa</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getPlanTypeLabel(type) {
+            const labels = {
+                'free': 'Miễn phí',
+                'basic': 'Cơ bản',
+                'standard': 'Tiêu chuẩn',
+                'premium': 'Cao cấp',
+                'enterprise': 'Doanh nghiệp'
+            };
+            return labels[type] || type;
+        }
+
+        function formatNumber(num) {
+            return new Intl.NumberFormat('vi-VN').format(num);
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(amount);
+        }
+
+        function openPlanModal(plan = null) {
+            editingPlanId = plan?.id || null;
+            const modal = document.getElementById('plan-modal');
+            if (!modal) return;
+
+            document.getElementById('modal-title').textContent = plan ? 'Sửa gói dịch vụ' : 'Thêm gói mới';
+
+            // Fill form with plan data
+            document.getElementById('plan-name').value = plan?.name || '';
+            document.getElementById('plan-type').value = plan?.plan_type || 'basic';
+            document.getElementById('plan-description').value = plan?.description || '';
+            document.getElementById('plan-monthly-price').value = plan?.pricing?.monthly_price || 0;
+
+            document.getElementById('limit-chars-month').value = plan?.limits?.max_chars_per_month || 5000;
+            document.getElementById('limit-audio-day').value = plan?.limits?.max_audio_per_day || 10;
+            document.getElementById('limit-audio-month').value = plan?.limits?.max_audio_per_month || 50;
+            document.getElementById('limit-text-length').value = plan?.limits?.max_text_length || 500;
+            document.getElementById('limit-audio-duration').value = plan?.limits?.max_audio_duration || 30;
+
+            document.getElementById('feat-voice-cloning').checked = plan?.features?.voice_cloning || false;
+            document.getElementById('feat-long-text').checked = plan?.features?.long_text || false;
+            document.getElementById('feat-priority-queue').checked = plan?.features?.priority_queue || false;
+            document.getElementById('feat-api-access').checked = plan?.features?.api_access || false;
+            document.getElementById('feat-watermark-free').checked = plan?.features?.watermark_free || false;
+            document.getElementById('feat-custom-voices').checked = plan?.features?.custom_voices || false;
+            document.getElementById('feat-batch-processing').checked = plan?.features?.batch_processing || false;
+
+            modal.classList.add('active');
+        }
+
+        function closePlanModal() {
+            const modal = document.getElementById('plan-modal');
+            if (modal) modal.classList.remove('active');
+            editingPlanId = null;
+        }
+
+        async function savePlan() {
+            const planData = {
+                name: document.getElementById('plan-name').value,
+                plan_type: document.getElementById('plan-type').value,
+                description: document.getElementById('plan-description').value,
+                pricing: {
+                    monthly_price: parseInt(document.getElementById('plan-monthly-price').value) || 0,
+                    yearly_price: parseInt(document.getElementById('plan-monthly-price').value || 0) * 10,
+                },
+                limits: {
+                    max_chars_per_month: parseInt(document.getElementById('limit-chars-month').value) || 5000,
+                    max_audio_per_day: parseInt(document.getElementById('limit-audio-day').value) || 10,
+                    max_audio_per_month: parseInt(document.getElementById('limit-audio-month').value) || 50,
+                    max_text_length: parseInt(document.getElementById('limit-text-length').value) || 500,
+                    max_audio_duration: parseInt(document.getElementById('limit-audio-duration').value) || 30,
+                    max_concurrent_jobs: 1,
+                },
+                features: {
+                    voice_cloning: document.getElementById('feat-voice-cloning').checked,
+                    long_text: document.getElementById('feat-long-text').checked,
+                    priority_queue: document.getElementById('feat-priority-queue').checked,
+                    api_access: document.getElementById('feat-api-access').checked,
+                    watermark_free: document.getElementById('feat-watermark-free').checked,
+                    custom_voices: document.getElementById('feat-custom-voices').checked,
+                    batch_processing: document.getElementById('feat-batch-processing').checked,
+                    analytics: true,
+                    support_priority: 'email',
+                }
+            };
+
+            try {
+                let result;
+                if (editingPlanId) {
+                    result = await api(`/subscription/plans/${editingPlanId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(planData)
+                    });
+                } else {
+                    result = await api('/subscription/plans', {
+                        method: 'POST',
+                        body: JSON.stringify(planData)
+                    });
+                }
+
+                closePlanModal();
+                loadPlans();
+                showToast(editingPlanId ? 'Đã cập nhật gói thành công!' : 'Đã thêm gói mới thành công!');
+            } catch (e) {
+                showToast('Lỗi: ' + (e.message || 'Không thể lưu gói'), 'error');
+            }
+        }
+
+        async function editPlan(planId) {
+            const data = await api(`/subscription/plans/${planId}`);
+            openPlanModal(data);
+        }
+
+        async function deletePlan(planId) {
+            if (!confirm('Bạn có chắc muốn xóa gói này?')) return;
+
+            try {
+                await api(`/subscription/plans/${planId}`, { method: 'DELETE' });
+                loadPlans();
+                showToast('Đã xóa gói thành công!');
+            } catch (e) {
+                showToast('Lỗi: ' + (e.detail || 'Không thể xóa gói'), 'error');
+            }
+        }
+
+        async function initDefaultPlans() {
+            if (!confirm('Tạo các gói mặc định? Gói hiện có sẽ không bị ảnh hưởng.')) return;
+
+            try {
+                const result = await api('/subscription/plans/init-defaults', { method: 'POST' });
+                loadPlans();
+                showToast(result.message || 'Đã khởi tạo gói mặc định!');
+            } catch (e) {
+                showToast('Lỗi: ' + (e.detail || 'Không thể khởi tạo'), 'error');
+            }
         }
 
         // Users
@@ -1368,43 +2561,43 @@
             if (verified) url += `&verified=${verified}`;
 
             const data = await api(url);
-            if (!data) return;
-
             const tbody = document.getElementById('users-table-body');
-            if (data.users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-gray);">Không có người dùng</td></tr>';
-            } else {
-                tbody.innerHTML = data.users.map(user => `
-                    <tr>
-                        <td>
-                            <div class="user-cell">
-                                <div class="user-avatar">${user.email[0].toUpperCase()}</div>
-                                <div class="user-info">
-                                    <span class="user-name">${user.username || 'N/A'}</span>
-                                    <span class="user-email">${user.email}</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td>${user.phone || '-'}</td>
-                        <td><span class="badge badge-${getPlanBadge(user.subscription_plan)}">${user.subscription_plan}</span></td>
-                        <td><span class="badge badge-${user.is_verified ? 'success' : 'warning'}">${user.is_verified ? 'Đã xác thực' : 'Chưa xác thực'}</span></td>
-                        <td>${new Date(user.created_at).toLocaleDateString('vi-VN')}</td>
-                        <td>
-                            <div class="action-btns">
-                                <button class="btn-action view" title="Xem" onclick="viewUser('${user.id}')">👁</button>
-                                <button class="btn-action edit" title="Sửa" onclick="editUser('${user.id}')">✏️</button>
-                                <button class="btn-action delete" title="Xóa" onclick="deleteUser('${user.id}')">🗑</button>
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
+            
+            if (!data || data.users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-gray);">Chưa có người dùng nào</td></tr>';
+                updatePagination('users', 0, page, pageSize);
+                return;
             }
+
+            tbody.innerHTML = data.users.map(user => `
+                <tr>
+                    <td>
+                        <div class="user-cell">
+                            <div class="user-avatar">${user.email[0].toUpperCase()}</div>
+                            <div class="user-info">
+                                <span class="user-name">${user.username || 'N/A'}</span>
+                                <span class="user-email">${user.email}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${user.phone || '-'}</td>
+                    <td><span class="badge badge-${getPlanBadge(user.subscription_plan)}">${user.subscription_plan}</span></td>
+                    <td><span class="badge badge-${user.is_verified ? 'success' : 'warning'}">${user.is_verified ? 'Đã xác thực' : 'Chưa xác thực'}</span></td>
+                    <td>${new Date(user.created_at).toLocaleDateString('vi-VN')}</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn-action view" title="Xem" onclick="viewUser('${user.id}')">👁</button>
+                            <button class="btn-action edit" title="Sửa" onclick="editUser('${user.id}')">✏️</button>
+                            <button class="btn-action delete" title="Xóa" onclick="deleteUser('${user.id}')">🗑</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
 
             updatePagination('users', data.total, page, pageSize);
         }
 
         function getPlanBadge(plan) {
-            // CRITICAL FIX: Use unified plan names (free/plus/pro)
             const badges = { free: 'info', plus: 'success', pro: 'warning' };
             return badges[plan] || 'info';
         }
@@ -1430,13 +2623,194 @@
 
         async function viewUser(id) {
             const data = await api(`/users/${id}`);
-            if (data) {
-                alert(`User: ${data.user.email}\nPlan: ${data.user.subscription_plan}\nCreated: ${new Date(data.user.created_at).toLocaleDateString('vi-VN')}`);
+            if (!data) return;
+            
+            // Open modal
+            document.getElementById('userQuotaModal').classList.add('active');
+            document.getElementById('quotaModalTitle').textContent = 'Chi tiết người dùng';
+            document.getElementById('quotaModalBody').innerHTML = '<div style="text-align:center;padding:40px;">Đang tải...</div>';
+            
+            // Get quota data
+            const quota = await api(`/users/${id}/quota`);
+            if (!quota) {
+                document.getElementById('quotaModalBody').innerHTML = '<div style="text-align:center;padding:40px;color:red;">Không thể tải dữ liệu quota</div>';
+                return;
             }
+            
+            const planColors = { free: '#6B7280', plus: '#3B82F6', pro: '#8B5CF6' };
+            const planNames = { free: 'Miễn phí', plus: 'Plus', pro: 'Pro' };
+            const planPrice = { free: '0đ', plus: '199.000đ/tháng', pro: '499.000đ/tháng' };
+            
+            // Calculate progress bar color
+            function getProgressClass(percent) {
+                if (percent < 50) return 'low';
+                if (percent < 80) return 'medium';
+                return 'high';
+            }
+            
+            // Format duration
+            function formatDuration(seconds) {
+                if (!seconds || seconds <= 0) return '∞';
+                const mins = Math.floor(seconds / 60);
+                return `${mins} phút`;
+            }
+            
+            // Format number
+            function formatNumber(num) {
+                if (num < 0) return '∞';
+                return num.toLocaleString('vi-VN');
+            }
+            
+            const html = `
+                <!-- User Info Header -->
+                <div class="user-info-header">
+                    <div class="user-info-avatar">${data.user.email[0].toUpperCase()}</div>
+                    <div class="user-info-details">
+                        <h4>${data.user.username || 'Chưa có tên'}</h4>
+                        <p>${data.user.email}</p>
+                        <p style="font-size:12px;margin-top:4px;">
+                            <span class="plan-badge ${data.user.subscription_plan}" style="background: ${planColors[data.user.subscription_plan]}20; color: ${planColors[data.user.subscription_plan]};">
+                                ${planNames[data.user.subscription_plan]}
+                            </span>
+                            <span style="margin-left:8px;color:var(--text-gray);">${planPrice[data.user.subscription_plan]}</span>
+                        </p>
+                    </div>
+                </div>
+                
+                ${quota.plan !== 'free' ? `
+                <!-- Subscription Info -->
+                <div class="subscription-info">
+                    <div class="subscription-row">
+                        <span class="subscription-label">Trạng thái</span>
+                        <span class="subscription-value" style="color: ${quota.plan_status === 'active' ? '#10B981' : '#EF4444'};">
+                            ${quota.plan_status === 'active' ? '✅ Hoạt động' : '⚠️ ' + quota.plan_status}
+                        </span>
+                    </div>
+                    <div class="subscription-row">
+                        <span class="subscription-label">Ngày hết hạn</span>
+                        <span class="subscription-value">${quota.subscription_expires_at ? new Date(quota.subscription_expires_at).toLocaleDateString('vi-VN') : 'Không giới hạn'}</span>
+                    </div>
+                    <div class="subscription-row">
+                        <span class="subscription-label">Số ngày còn lại</span>
+                        <span class="subscription-value" style="color: ${quota.days_remaining === 0 ? '#EF4444' : (quota.days_remaining <= 7 ? '#F59E0B' : '#10B981')};">
+                            ${quota.days_remaining !== null ? quota.days_remaining + ' ngày' : '∞'}
+                        </span>
+                    </div>
+                </div>
+                ` : ''}
+                
+                ${quota.is_expired ? `
+                <!-- Expiry Warning -->
+                <div class="expiry-warning">
+                    <span>⚠️</span>
+                    <span>Tài khoản đã hết hạn! Người dùng không thể sử dụng dịch vụ.</span>
+                </div>
+                ` : ''}
+                
+                <!-- Daily Usage -->
+                <div class="quota-section">
+                    <h4>📅 Sử dụng hôm nay</h4>
+                    <div class="quota-grid">
+                        <div class="quota-card">
+                            <div class="quota-card-header">
+                                <span class="quota-card-title">Lượt TTS</span>
+                            </div>
+                            <div class="quota-card-value">${formatNumber(quota.usage.daily.used)}</div>
+                            <div class="quota-card-remaining">${formatNumber(quota.usage.daily.remaining)} / ${formatNumber(quota.usage.daily.limit)} lượt</div>
+                            <div class="quota-progress">
+                                <div class="quota-progress-bar ${getProgressClass(quota.usage.daily.percent)}" 
+                                     style="width: ${Math.min(100, quota.usage.daily.percent)}%"></div>
+                            </div>
+                        </div>
+                        <div class="quota-card">
+                            <div class="quota-card-header">
+                                <span class="quota-card-title">Thời lượng tối đa</span>
+                            </div>
+                            <div class="quota-card-value">${formatDuration(quota.limits.max_duration)}</div>
+                            <div class="quota-card-remaining">Mỗi lần TTS</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Monthly Usage -->
+                <div class="quota-section">
+                    <h4>📆 Sử dụng tháng này</h4>
+                    <div class="quota-grid">
+                        <div class="quota-card">
+                            <div class="quota-card-header">
+                                <span class="quota-card-title">Số lần TTS</span>
+                            </div>
+                            <div class="quota-card-value">${formatNumber(quota.usage.monthly.used)}</div>
+                            <div class="quota-card-remaining">Lượt</div>
+                        </div>
+                        <div class="quota-card">
+                            <div class="quota-card-header">
+                                <span class="quota-card-title">Ký tự đã dùng</span>
+                            </div>
+                            <div class="quota-card-value">${formatNumber(quota.usage.monthly.chars_used)}</div>
+                            <div class="quota-card-remaining">${formatNumber(quota.usage.monthly.chars_remaining)} / ${formatNumber(quota.usage.monthly.chars_limit)} ký tự</div>
+                            <div class="quota-progress">
+                                <div class="quota-progress-bar ${getProgressClass(quota.usage.monthly.percent)}" 
+                                     style="width: ${Math.min(100, quota.usage.monthly.percent)}%"></div>
+                            </div>
+                        </div>
+                        <div class="quota-card">
+                            <div class="quota-card-header">
+                                <span class="quota-card-title">Tổng thời lượng</span>
+                            </div>
+                            <div class="quota-card-value">${Math.floor(quota.usage.monthly.duration_used / 60)} phút</div>
+                            <div class="quota-card-remaining">${formatDuration(quota.usage.monthly.duration_used)}</div>
+                        </div>
+                        <div class="quota-card">
+                            <div class="quota-card-header">
+                                <span class="quota-card-title">Độ dài text tối đa</span>
+                            </div>
+                            <div class="quota-card-value">${formatNumber(quota.limits.max_text_length)}</div>
+                            <div class="quota-card-remaining">Ký tự mỗi lần</div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${quota.plan === 'free' ? `
+                <!-- Free Limits Info -->
+                <div class="free-limits-info">
+                    <h5>📋 Giới hạn gói Free</h5>
+                    <div class="free-limit-item">📅 <strong>${quota.limits.daily_audio_limit}</strong> lượt TTS / ngày</div>
+                    <div class="free-limit-item">📆 <strong>${(quota.limits.monthly_chars_limit / 1000).toFixed(0)}K</strong> ký tự / tháng</div>
+                    <div class="free-limit-item">📝 <strong>${quota.limits.max_text_length}</strong> ký tự / lần</div>
+                    <div class="free-limit-item">⏱️ <strong>${formatDuration(quota.limits.max_duration)}</strong> mỗi lần</div>
+                    <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(59,130,246,0.2);">
+                        <a href="/pricing" style="color:#3B82F6;font-weight:600;">Nâng cấp lên Plus/Pro để có nhiều hơn →</a>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                    <div style="font-size:12px;color:var(--text-gray);">
+                        Ngày đăng ký: ${new Date(data.user.created_at).toLocaleDateString('vi-VN')}
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-secondary" onclick="closeQuotaModal()">Đóng</button>
+                        <button class="btn btn-primary" onclick="editUser('${id}'); closeQuotaModal();">Sửa gói</button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('quotaModalBody').innerHTML = html;
         }
 
+        function closeQuotaModal() {
+            document.getElementById('userQuotaModal').classList.remove('active');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('userQuotaModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeQuotaModal();
+            }
+        });
+
         async function editUser(id) {
-            // CRITICAL FIX: Use unified plan names (free/plus/pro)
             const plan = prompt('Nhập gói mới (free, plus, pro):');
             if (!plan) return;
 
@@ -1468,31 +2842,32 @@
             if (status) url += `&status=${status}`;
 
             const data = await api(url);
-            if (!data) return;
-
             const tbody = document.getElementById('subscriptions-table-body');
-            if (data.subscriptions.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-gray);">Không có đăng ký</td></tr>';
-            } else {
-                tbody.innerHTML = data.subscriptions.map(sub => `
-                    <tr>
-                        <td>${sub.user_email}</td>
-                        <td><span class="badge badge-${getPlanBadge(sub.plan)}">${sub.plan}</span></td>
-                        <td><span class="badge badge-${getStatusBadge(sub.status)}">${sub.status}</span></td>
-                        <td>${new Date(sub.started_at).toLocaleDateString('vi-VN')}</td>
-                        <td>${sub.expires_at ? new Date(sub.expires_at).toLocaleDateString('vi-VN') : 'Không giới hạn'}</td>
-                        <td>${sub.auto_renew ? '✅' : '❌'}</td>
-                        <td>
-                            ${sub.status === 'pending' ? `
-                                <div class="action-btns">
-                                    <button class="btn-action approve" title="Duyệt" onclick="approveSubscription('${sub.id}')">✅</button>
-                                    <button class="btn-action reject" title="Từ chối" onclick="rejectSubscription('${sub.id}')">❌</button>
-                                </div>
-                            ` : '-'}
-                        </td>
-                    </tr>
-                `).join('');
+            
+            if (!data || data.subscriptions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-gray);">Chưa có đăng ký nào</td></tr>';
+                updatePagination('subscriptions', 0, page, pageSize);
+                return;
             }
+
+            tbody.innerHTML = data.subscriptions.map(sub => `
+                <tr>
+                    <td>${sub.user_email}</td>
+                    <td><span class="badge badge-${getPlanBadge(sub.plan)}">${sub.plan}</span></td>
+                    <td><span class="badge badge-${getStatusBadge(sub.status)}">${sub.status}</span></td>
+                    <td>${new Date(sub.started_at).toLocaleDateString('vi-VN')}</td>
+                    <td>${sub.expires_at ? new Date(sub.expires_at).toLocaleDateString('vi-VN') : 'Không giới hạn'}</td>
+                    <td>${sub.auto_renew ? '✅' : '❌'}</td>
+                    <td>
+                        ${sub.status === 'pending' ? `
+                            <div class="action-btns">
+                                <button class="btn-action view" title="Duyệt" onclick="approveSubscription('${sub.id}')">✅</button>
+                                <button class="btn-action delete" title="Từ chối" onclick="rejectSubscription('${sub.id}')">❌</button>
+                            </div>
+                        ` : '-'}
+                    </td>
+                </tr>
+            `).join('');
 
             updatePagination('subscriptions', data.total, page, pageSize);
         }
@@ -1520,9 +2895,6 @@
                 if (res.ok) {
                     alert('Đã duyệt thành công!');
                     loadSubscriptions(subsPage);
-                } else {
-                    const err = await res.json();
-                    alert('Lỗi: ' + (err.detail || 'Không thể duyệt'));
                 }
             } catch (e) {
                 alert('Lỗi kết nối');
@@ -1542,9 +2914,6 @@
                 if (res.ok) {
                     alert('Đã từ chối!');
                     loadSubscriptions(subsPage);
-                } else {
-                    const err = await res.json();
-                    alert('Lỗi: ' + (err.detail || 'Không thể từ chối'));
                 }
             } catch (e) {
                 alert('Lỗi kết nối');
@@ -1560,32 +2929,33 @@
             if (status) url += `&status=${status}`;
 
             const data = await api(url);
-            if (!data) return;
-
             const tbody = document.getElementById('payments-table-body');
-            if (data.payments.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-gray);">Không có đơn hàng</td></tr>';
-            } else {
-                tbody.innerHTML = data.payments.map(p => `
-                    <tr>
-                        <td><code style="font-size:12px">${p.order_id}</code></td>
-                        <td>${p.user_email}</td>
-                        <td><span class="badge badge-${getPlanBadge(p.plan)}">${p.plan}</span></td>
-                        <td>${p.amount.toLocaleString('vi-VN')}đ</td>
-                        <td>${getMethodName(p.method)}</td>
-                        <td><span class="badge badge-${getPaymentStatusBadge(p.status)}">${getPaymentStatusText(p.status)}</span></td>
-                        <td>${new Date(p.created_at).toLocaleDateString('vi-VN')}</td>
-                        <td>
-                            ${(p.status === 'pending' || p.status === 'completed') ? `
-                                <div class="action-btns">
-                                    <button class="btn-action approve" title="Duyệt" onclick="approvePayment('${p.order_id}')">✅</button>
-                                    <button class="btn-action reject" title="Từ chối" onclick="rejectPayment('${p.order_id}')">❌</button>
-                                </div>
-                            ` : '-'}
-                        </td>
-                    </tr>
-                `).join('');
+            
+            if (!data || data.payments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-gray);">Chưa có thanh toán nào</td></tr>';
+                updatePagination('payments', 0, page, pageSize);
+                return;
             }
+
+            tbody.innerHTML = data.payments.map(p => `
+                <tr>
+                    <td><code style="font-size:12px">${p.order_id}</code></td>
+                    <td>${p.user_email}</td>
+                    <td><span class="badge badge-${getPlanBadge(p.plan)}">${p.plan}</span></td>
+                    <td>${p.amount.toLocaleString('vi-VN')}đ</td>
+                    <td>${getMethodName(p.method)}</td>
+                    <td><span class="badge badge-${getPaymentStatusBadge(p.status)}">${getPaymentStatusText(p.status)}</span></td>
+                    <td>${new Date(p.created_at).toLocaleDateString('vi-VN')}</td>
+                    <td>
+                        ${(p.status === 'pending' || p.status === 'completed') ? `
+                            <div class="action-btns">
+                                <button class="btn-action view" title="Duyệt" onclick="approvePayment('${p.order_id}')">✅</button>
+                                <button class="btn-action delete" title="Từ chối" onclick="rejectPayment('${p.order_id}')">❌</button>
+                            </div>
+                        ` : '-'}
+                    </td>
+                </tr>
+            `).join('');
 
             updatePagination('payments', data.total, page, pageSize);
         }
@@ -1635,9 +3005,6 @@
                 if (res.ok) {
                     alert('Đã duyệt thành công!');
                     loadPayments(paymentsPage);
-                } else {
-                    const err = await res.json();
-                    alert('Lỗi: ' + (err.detail || 'Không thể duyệt'));
                 }
             } catch (e) {
                 alert('Lỗi kết nối');
@@ -1658,9 +3025,6 @@
                 if (res.ok) {
                     alert('Đã từ chối!');
                     loadPayments(paymentsPage);
-                } else {
-                    const err = await res.json();
-                    alert('Lỗi: ' + (err.detail || 'Không thể từ chối'));
                 }
             } catch (e) {
                 alert('Lỗi kết nối');
@@ -1668,28 +3032,228 @@
         }
 
         // Finance
+        let financeByPlanChartInstance = null;
+        let txPage = 1;
+        const txPageSize = 20;
+
         async function loadFinance() {
-            const data = await api('/finance/stats');
-            if (!data) return;
-
-            document.getElementById('finance-total-revenue').textContent = `$${data.total_revenue.toFixed(2)}`;
-            document.getElementById('finance-active-subs').textContent = data.active_subscriptions;
-            document.getElementById('finance-free-users').textContent = data.free_users;
-            document.getElementById('finance-paid-users').textContent = data.paid_users;
-
-            // Load history
-            const history = await api('/finance/revenue?days=30');
-            if (history && history.history.length > 0) {
-                const tbody = document.getElementById('revenue-history-body');
-                tbody.innerHTML = history.history.map(h => `
-                    <tr>
-                        <td>${h._id}</td>
-                        <td>${h.count}</td>
-                        <td>${h.free}</td>
-                        <td>${h.paid}</td>
-                    </tr>
-                `).join('');
+            // Load revenue summary
+            const summary = await api('/revenue/summary');
+            const growth = await api('/revenue/growth');
+            
+            // Update summary cards
+            if (summary) {
+                document.getElementById('finance-total-30d').textContent = formatCurrency(summary.total_revenue);
+                document.getElementById('finance-total-orders').textContent = summary.total_orders;
+                document.getElementById('finance-pending').textContent = summary.pending_count + ' chờ duyệt';
+                
+                // Revenue by plan
+                const plusRevenue = summary.revenue_by_plan.find(r => r.plan === 'plus') || { revenue: 0, count: 0 };
+                const proRevenue = summary.revenue_by_plan.find(r => r.plan === 'pro') || { revenue: 0, count: 0 };
+                
+                document.getElementById('finance-plus-revenue').textContent = formatCurrency(plusRevenue.revenue);
+                document.getElementById('finance-plus-count').textContent = plusRevenue.count + ' giao dịch';
+                document.getElementById('finance-pro-revenue').textContent = formatCurrency(proRevenue.revenue);
+                document.getElementById('finance-pro-count').textContent = proRevenue.count + ' giao dịch';
+                
+                // Revenue by payment method
+                const methods = ['cash', 'banking', 'vnpay', 'momo'];
+                methods.forEach(m => {
+                    const methodData = summary.revenue_by_method.find(r => r.method === m);
+                    const el = document.getElementById('method-' + m);
+                    if (el) {
+                        el.textContent = formatCurrency(methodData?.revenue || 0);
+                    }
+                });
             }
+            
+            // Update growth
+            if (growth) {
+                const growthEl = document.getElementById('finance-growth');
+                const growthPercent = growth.growth.revenue_percent;
+                if (growthPercent > 0) {
+                    growthEl.textContent = `↑ ${growthPercent}% so với tháng trước`;
+                    growthEl.style.color = '#86EFAC';
+                } else if (growthPercent < 0) {
+                    growthEl.textContent = `↓ ${Math.abs(growthPercent)}% so với tháng trước`;
+                    growthEl.style.color = '#FCA5A5';
+                } else {
+                    growthEl.textContent = 'Không thay đổi';
+                    growthEl.style.color = 'rgba(255,255,255,0.8)';
+                }
+            }
+            
+            // Load charts
+            await loadFinanceTrendChart();
+            await loadFinanceByPlanChart();
+            
+            // Load transactions table
+            await loadFinanceTransactions();
+        }
+        
+        function formatCurrency(amount) {
+            if (amount >= 1000000) {
+                return (amount / 1000000).toFixed(1) + 'Mđ';
+            } else if (amount >= 1000) {
+                return (amount / 1000).toFixed(0) + 'Kđ';
+            }
+            return amount.toLocaleString('vi-VN') + 'đ';
+        }
+
+        async function loadFinanceTrendChart() {
+            const days = parseInt(document.getElementById('financeChartRange')?.value || 30);
+            const summary = await api(`/revenue/summary?days=${days}`);
+            
+            const ctx = document.getElementById('financeTrendChart');
+            if (!ctx || !summary) return;
+
+            if (financeTrendChartInstance) {
+                financeTrendChartInstance.destroy();
+            }
+
+            const labels = summary.revenue_by_day.map(d => d._id);
+            const data = summary.revenue_by_day.map(d => d.revenue);
+
+            financeTrendChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Doanh thu',
+                        data: data,
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    return formatCurrency(context.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadFinanceByPlanChart() {
+            const summary = await api('/revenue/summary?days=30');
+            
+            const ctx = document.getElementById('financeByPlanChart');
+            if (!ctx || !summary) return;
+
+            if (financeByPlanChartInstance) {
+                financeByPlanChartInstance.destroy();
+            }
+
+            const plusRevenue = summary.revenue_by_plan.find(r => r.plan === 'plus') || { revenue: 0, count: 0 };
+            const proRevenue = summary.revenue_by_plan.find(r => r.plan === 'pro') || { revenue: 0, count: 0 };
+
+            financeByPlanChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Plus', 'Pro'],
+                    datasets: [{
+                        data: [plusRevenue.revenue, proRevenue.revenue],
+                        backgroundColor: ['#3B82F6', '#8B5CF6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${formatCurrency(context.raw)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateFinanceCharts() {
+            loadFinanceTrendChart();
+        }
+
+        async function loadFinanceTransactions(page = 1) {
+            txPage = page;
+            const status = document.getElementById('tx-status-filter')?.value || '';
+            const plan = document.getElementById('tx-plan-filter')?.value || '';
+            
+            let url = `/transactions?page=${page}&page_size=${txPageSize}`;
+            if (status) url += `&status=${status}`;
+            if (plan) url += `&plan=${plan}`;
+            
+            const data = await api(url);
+            const tbody = document.getElementById('transactions-table-body');
+            
+            if (!data || data.transactions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-gray);">Chưa có giao dịch nào</td></tr>';
+                document.getElementById('tx-pagination-info').textContent = 'Không có dữ liệu';
+                document.getElementById('tx-pagination-btns').innerHTML = '';
+                return;
+            }
+            
+            tbody.innerHTML = data.transactions.map(t => `
+                <tr>
+                    <td><code style="font-size:11px">${t.order_id}</code></td>
+                    <td style="font-size:13px;">${t.user_email}</td>
+                    <td><span class="badge badge-${getPlanBadge(t.plan)}">${t.plan}</span></td>
+                    <td style="font-weight:600;color:#10B981;">${formatCurrency(t.amount)}</td>
+                    <td>${getMethodName(t.method)}</td>
+                    <td><span class="badge badge-${getPaymentStatusBadge(t.status)}">${getPaymentStatusText(t.status)}</span></td>
+                    <td style="font-size:12px;">${t.created_at_vn ? new Date(t.created_at_vn).toLocaleDateString('vi-VN') : '-'}</td>
+                    <td style="font-size:12px;">${t.approved_at ? new Date(t.approved_at).toLocaleDateString('vi-VN') : '-'}</td>
+                </tr>
+            `).join('');
+            
+            // Pagination
+            const start = (page - 1) * txPageSize + 1;
+            const end = Math.min(page * txPageSize, data.total);
+            document.getElementById('tx-pagination-info').textContent = 
+                `Hiển thị ${start} - ${end} của ${data.total}`;
+            
+            const totalPages = Math.ceil(data.total / txPageSize);
+            let btns = '';
+            for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+                btns += `<button class="pagination-btn ${i === page ? 'active' : ''}" onclick="loadFinanceTransactions(${i})">${i}</button>`;
+            }
+            document.getElementById('tx-pagination-btns').innerHTML = btns;
         }
 
         // Logs
@@ -1701,23 +3265,125 @@
             if (action) url += `&action=${action}`;
 
             const data = await api(url);
-            if (!data) return;
-
             const tbody = document.getElementById('logs-table-body');
-            if (data.logs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-gray);">Không có nhật ký</td></tr>';
-            } else {
-                tbody.innerHTML = data.logs.map(log => `
-                    <tr>
-                        <td>${log.user_email}</td>
-                        <td><span class="badge badge-${getActionBadge(log.action)}">${log.action}</span></td>
-                        <td>${new Date(log.timestamp).toLocaleString('vi-VN')}</td>
-                        <td>${JSON.stringify(log.metadata || {}).slice(0, 50)}...</td>
-                    </tr>
-                `).join('');
+            
+            if (!data || data.logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-gray);">Chưa có nhật ký nào</td></tr>';
+                updatePagination('logs', 0, page, pageSize);
+                return;
             }
 
+            tbody.innerHTML = data.logs.map(log => `
+                <tr>
+                    <td>${log.user_email}</td>
+                    <td><span class="badge badge-${getActionBadge(log.action)}">${log.action}</span></td>
+                    <td>${new Date(log.timestamp).toLocaleString('vi-VN')}</td>
+                    <td>${JSON.stringify(log.metadata || {}).slice(0, 50)}...</td>
+                </tr>
+            `).join('');
+
             updatePagination('logs', data.total, page, pageSize);
+        }
+
+        // Audio History
+        let audioPage = 1;
+        const audioPageSize = 20;
+
+        async function loadAudioHistory(page = 1) {
+            audioPage = page;
+            const voiceFilter = document.getElementById('audio-voice-filter')?.value || '';
+            const userFilter = document.getElementById('audio-user-filter')?.value || '';
+
+            let url = `/audio/history?page=${page}&page_size=${audioPageSize}`;
+            if (voiceFilter) url += `&voice_id=${voiceFilter}`;
+
+            const [historyData, statsData] = await Promise.all([
+                api(url),
+                api('/audio/stats')
+            ]);
+
+            // Update stats
+            if (statsData) {
+                document.getElementById('audio-total-count').textContent = statsData.total_audios || 0;
+                document.getElementById('audio-today-count').textContent = statsData.audios_today || 0;
+                document.getElementById('audio-total-size').textContent = (statsData.total_size_mb || 0) + ' MB';
+                document.getElementById('audio-total-duration').textContent = formatDuration(statsData.total_duration_seconds || 0);
+            }
+
+            const tbody = document.getElementById('audio-table-body');
+
+            if (!historyData || historyData.items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-gray);">Chưa có audio nào</td></tr>';
+                updateAudioPagination(0, page);
+                return;
+            }
+
+            // Filter by user email if needed
+            let items = historyData.items;
+            if (userFilter) {
+                items = items.filter(item =>
+                    (item.user_email || '').toLowerCase().includes(userFilter.toLowerCase())
+                );
+            }
+
+            tbody.innerHTML = items.map(audio => `
+                <tr>
+                    <td>
+                        <div style="font-weight:500;">${audio.user_email || 'Unknown'}</div>
+                        ${audio.user_name ? `<div style="font-size:11px;color:#666;">${audio.user_name}</div>` : ''}
+                    </td>
+                    <td>${audio.voice_id || '-'}</td>
+                    <td>${formatDuration(audio.duration || 0)}</td>
+                    <td>${formatBytes(audio.filesize || 0)}</td>
+                    <td>${audio.created_at ? new Date(audio.created_at).toLocaleString('vi-VN') : '-'}</td>
+                    <td>
+                        <button class="btn-sm btn-info" onclick="viewAudioDetail('${audio.id}')" title="Xem chi tiết">
+                            👁️
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            updateAudioPagination(historyData.total, page);
+        }
+
+        function updateAudioPagination(total, page) {
+            const start = (page - 1) * audioPageSize + 1;
+            const end = Math.min(page * audioPageSize, total);
+            document.getElementById('audio-pagination-info').textContent =
+                `Hiển thị ${total > 0 ? start : 0} - ${end} của ${total}`;
+
+            const totalPages = Math.ceil(total / audioPageSize);
+            let btns = '';
+            if (page > 1) {
+                btns += `<button class="pagination-btn" onclick="loadAudioHistory(${page - 1})">‹</button>`;
+            }
+            for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, page + 2); i++) {
+                btns += `<button class="pagination-btn ${i === page ? 'active' : ''}" onclick="loadAudioHistory(${i})">${i}</button>`;
+            }
+            if (page < totalPages) {
+                btns += `<button class="pagination-btn" onclick="loadAudioHistory(${page + 1})">›</button>`;
+            }
+            document.getElementById('audio-pagination-btns').innerHTML = btns;
+        }
+
+        function formatDuration(seconds) {
+            if (!seconds) return '0s';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.round(seconds % 60);
+            if (mins > 0) return `${mins}m ${secs}s`;
+            return `${secs}s`;
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes) return '0 B';
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function viewAudioDetail(audioId) {
+            alert('Chi tiết audio: ' + audioId + '\n\nTính năng đang phát triển.');
         }
 
         function getActionBadge(action) {
@@ -1733,45 +3399,157 @@
         document.getElementById('sub-status-filter')?.addEventListener('change', () => loadSubscriptions(1));
         document.getElementById('payment-status-filter')?.addEventListener('change', () => loadPayments(1));
         document.getElementById('log-action-filter')?.addEventListener('change', () => loadLogs(1));
+        document.getElementById('audio-voice-filter')?.addEventListener('change', () => loadAudioHistory(1));
+        document.getElementById('audio-user-filter')?.addEventListener('input', debounce(() => loadAudioHistory(1), 500));
+
+        // Debounce helper
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
 
         // Check admin access
         async function checkAdminAccess() {
-            const user = PhuongAnhTTS.getCurrentUser();
-            const token = PhuongAnhTTS.getAuthToken();
+            // Get token directly from localStorage (no need for PhuongAnhTTS)
+            const token = localStorage.getItem('auth_token');
 
-            if (!user || !token) {
-                alert('Vui lòng đăng nhập để truy cập trang Admin!');
+            if (!token) {
+                console.log('[Admin] No token found, redirecting to login');
                 location.href = '/login?redirect=/admin';
                 return false;
             }
 
-            if (user.role !== 'admin') {
-                alert('Bạn không có quyền truy cập trang Admin!');
+            // Verify admin by calling API
+            const result = await api('/check');
+            if (!result || !result.is_admin) {
+                console.log('[Admin] Not admin or API error, redirecting to profile');
                 location.href = '/profile';
                 return false;
             }
 
+            console.log('[Admin] Access granted');
             return true;
         }
 
         // Init
         async function init() {
+            console.log('[Admin] Init called, checking access...');
             const hasAccess = await checkAdminAccess();
+            console.log('[Admin] Access check result:', hasAccess);
             if (!hasAccess) return;
 
-            // Handle hash routing
             handleRoute();
-
-            // Listen for hash changes
             window.addEventListener('hashchange', handleRoute);
         }
 
+        // Auto-init on DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', init);
+
         function handleRoute() {
             const hash = window.location.hash || '#dashboard';
-            switchTab(hash.substring(1));
+            const tab = hash.substring(1) || 'dashboard';
+            switchTab(tab);
         }
-
-        init();
     </script>
 </body>
+    <!-- Plan Modal -->
+    <div class="modal-overlay" id="plan-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">Thêm gói dịch vụ</h3>
+                <button class="modal-close" onclick="closePlanModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Tên gói</label>
+                <input type="text" id="plan-name" placeholder="VD: Gói Cao cấp">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Loại gói</label>
+                    <select id="plan-type">
+                        <option value="free">Miễn phí</option>
+                        <option value="basic">Cơ bản</option>
+                        <option value="standard">Tiêu chuẩn</option>
+                        <option value="premium">Cao cấp</option>
+                        <option value="enterprise">Doanh nghiệp</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Giá/tháng (VND)</label>
+                    <input type="number" id="plan-monthly-price" value="0" min="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Mô tả</label>
+                <input type="text" id="plan-description" placeholder="Mô tả ngắn về gói">
+            </div>
+            <h4 style="margin: 16px 0 12px; color: var(--secondary);">Giới hạn</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Ký tự/tháng</label>
+                    <input type="number" id="limit-chars-month" value="5000" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Audio/ngày</label>
+                    <input type="number" id="limit-audio-day" value="10" min="0">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Audio/tháng</label>
+                    <input type="number" id="limit-audio-month" value="50" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Độ dài văn bản (ký tự)</label>
+                    <input type="number" id="limit-text-length" value="500" min="1">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Thời lượng audio tối đa (giây)</label>
+                <input type="number" id="limit-audio-duration" value="30" min="1">
+            </div>
+            <h4 style="margin: 16px 0 12px; color: var(--secondary);">Tính năng</h4>
+            <div class="checkbox-group">
+                <label class="checkbox-item">
+                    <input type="checkbox" id="feat-voice-cloning">
+                    Voice Cloning
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" id="feat-long-text">
+                    Văn bản dài
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" id="feat-priority-queue">
+                    Ưu tiên xử lý
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" id="feat-api-access">
+                    API Access
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" id="feat-watermark-free">
+                    Không watermark
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" id="feat-custom-voices">
+                    Tạo giọng tùy chỉnh
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" id="feat-batch-processing">
+                    Xử lý hàng loạt
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closePlanModal()">Hủy</button>
+                <button class="btn btn-primary" onclick="savePlan()">Lưu</button>
+            </div>
+        </div>
+    </div>
 </html>

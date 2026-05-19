@@ -14,7 +14,7 @@ from slowapi.errors import RateLimitExceeded
 
 from core.config import get_settings
 from core.database import Database, RedisClient
-from api.routes import auth_router, user_router, audio_router, admin_router, subscription_router, payment_router
+from api.routes import auth_router, user_router, audio_router, admin_router, subscription_router, payment_router, finance_router
 
 # Configure logging
 logging.basicConfig(
@@ -163,6 +163,7 @@ app.include_router(audio_router, prefix="/api")
 app.include_router(admin_router)  # Already has /api/admin prefix
 app.include_router(subscription_router)  # Already has /api/subscription prefix
 app.include_router(payment_router)  # Already has /api/payment prefix
+app.include_router(finance_router)  # Already has /api/finance prefix
 
 
 # ===========================================

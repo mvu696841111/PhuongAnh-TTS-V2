@@ -202,20 +202,21 @@ class RequirePermission:
     async def __call__(
         self,
         user: dict = Depends(get_current_user),
-        subscription_service: SubscriptionService = Depends(get_subscription_service)
     ) -> dict:
         """Check if user has required permission."""
-        has_permission = await subscription_service.has_permission(
-            user["_id"], self.permission
+        # Check if user is admin
+        if user.get("role") == "admin":
+            return user
+        
+        # Check user permissions list
+        user_permissions = user.get("permissions", [])
+        if self.permission in user_permissions:
+            return user
+        
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"You don't have permission to perform this action."
         )
-        
-        if not has_permission:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"This feature requires the '{self.permission}' permission. Please upgrade your plan."
-            )
-        
-        return user
 
 
 # ===========================================

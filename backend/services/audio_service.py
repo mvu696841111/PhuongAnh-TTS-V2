@@ -168,7 +168,8 @@ class AudioService:
 
     async def list_user_audios(
         self,
-        user_id: str,
+        user_id: str = None,
+        session_id: str = None,
         page: int = 1,
         per_page: int = 20
     ) -> Tuple[List[dict], int]:
@@ -176,7 +177,8 @@ class AudioService:
         List user's audio files with pagination.
         
         Args:
-            user_id: User ID
+            user_id: User ID (for logged-in users)
+            session_id: Session ID (for anonymous users)
             page: Page number (1-indexed)
             per_page: Items per page
             
@@ -184,8 +186,14 @@ class AudioService:
             Tuple of (audio_list, total_count)
         """
         try:
-            # Build query
-            query = {"user_id": ObjectId(user_id)}
+            # Build query for user_id OR session_id
+            if user_id:
+                query = {"user_id": ObjectId(user_id)}
+            elif session_id:
+                query = {"user_id": session_id, "is_anonymous": True}
+            else:
+                # No identifier - return empty
+                return [], 0
             
             # Get total count
             total = await self.audio_files.count_documents(query)
@@ -199,7 +207,8 @@ class AudioService:
             audios = []
             async for audio in cursor:
                 audio["id"] = str(audio.pop("_id"))
-                audio["user_id"] = str(audio.pop("user_id"))
+                # Keep user_id as string (could be ObjectId or session_id string)
+                audio["user_id"] = str(audio["user_id"]) if audio.get("user_id") else None
                 audios.append(audio)
             
             return audios, total
@@ -297,7 +306,7 @@ class AudioService:
             # Check text length limit
             max_text_length = limits.get_max_text_length(plan)
             if text_length > max_text_length:
-                return False, f"Text too long. Maximum is {max_text_length} characters for {plan} plan."
+                return False, f"Văn bản quá dài. Tối đa {max_text_length} ký tự cho gói {plan}."
 
             # Check daily audio limit (using Vietnam timezone)
             daily_limit = limits.get_daily_audio_limit(plan)
@@ -310,7 +319,7 @@ class AudioService:
                 })
 
                 if today_count >= daily_limit:
-                    return False, f"Daily audio limit reached ({daily_limit}). Upgrade your plan for more."
+                    return False, f"Bạn đã sử dụng hết {daily_limit} lượt TTS hôm nay. Nâng cấp gói để sử dụng thêm."
 
             # Check monthly character limit
             month_start = now_vietnam().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -326,13 +335,79 @@ class AudioService:
 
             if monthly_chars + text_length > monthly_limit:
                 remaining = max(0, monthly_limit - monthly_chars)
-                return False, f"Monthly character limit reached. You have {remaining} characters remaining."
+                return False, f"Bạn đã sử dụng hết giới hạn ký tự tháng này. Còn lại {remaining} ký tự."
 
             return True, None
 
         except Exception as e:
             logger.error(f"Check usage limits error: {e}")
-            return False, "Failed to check usage limits"
+            return False, "Lỗi kiểm tra giới hạn sử dụng"
+
+    async def get_user_limits_info(self, user_id: str) -> dict:
+        """
+        Get detailed usage limits information for a user.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Dictionary with limits and current usage
+        """
+        try:
+            # Get user plan
+            user = await self.db.users.find_one({"_id": ObjectId(user_id)})
+            plan = user.get("subscription_plan", "free") if user else "free"
+            limits = self.limits
+
+            # Get daily audio count
+            today = now_vietnam().replace(hour=0, minute=0, second=0, microsecond=0)
+            today_utc = today.astimezone(timezone.utc)
+            daily_count = await self.audio_files.count_documents({
+                "user_id": ObjectId(user_id),
+                "created_at": {"$gte": today_utc}
+            })
+
+            # Get monthly characters
+            month_start = now_vietnam().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            month_start_utc = month_start.astimezone(timezone.utc)
+            monthly_logs = await self.usage_logs.find({
+                "user_id": ObjectId(user_id),
+                "action": "tts_generate",
+                "timestamp": {"$gte": month_start_utc}
+            }).to_list(length=None)
+
+            monthly_chars = sum(log.get("characters_used", 0) for log in monthly_logs)
+
+            return {
+                "plan": plan,
+                "limits": {
+                    "daily_audio_limit": limits.get_daily_audio_limit(plan),
+                    "monthly_chars_limit": limits.get_monthly_chars_limit(plan),
+                    "max_text_length": limits.get_max_text_length(plan),
+                    "max_duration": limits.get_max_duration(plan),
+                },
+                "usage": {
+                    "daily_audio_count": daily_count,
+                    "monthly_chars_used": monthly_chars,
+                },
+                "remaining": {
+                    "daily_audio": max(0, limits.get_daily_audio_limit(plan) - daily_count) if limits.get_daily_audio_limit(plan) > 0 else -1,
+                    "monthly_chars": max(0, limits.get_monthly_chars_limit(plan) - monthly_chars) if limits.get_monthly_chars_limit(plan) > 0 else -1,
+                }
+            }
+        except Exception as e:
+            logger.error(f"Get user limits info error: {e}")
+            return {
+                "plan": "free",
+                "limits": {
+                    "daily_audio_limit": 10,
+                    "monthly_chars_limit": 10000,
+                    "max_text_length": 500,
+                    "max_duration": 30,
+                },
+                "usage": {"daily_audio_count": 0, "monthly_chars_used": 0},
+                "remaining": {"daily_audio": 10, "monthly_chars": 10000}
+            }
 
     # ===========================================
     # Temporary Files

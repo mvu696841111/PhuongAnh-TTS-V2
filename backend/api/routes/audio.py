@@ -15,9 +15,11 @@ import logging
 import os
 import tempfile
 import time
+from datetime import datetime
 from typing import Optional, AsyncGenerator
 from dataclasses import dataclass
 from pathlib import Path
+import aiofiles
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Form, Request
 from fastapi.responses import FileResponse, StreamingResponse
@@ -192,10 +194,12 @@ async def generate_tts_form(
     voice_id: str = Form(default="Ly"),
     format: str = Form(default="wav"),
     current_user: Optional[dict] = Depends(get_current_user_optional),
+    audio_service: AudioService = Depends(get_audio_service),
 ):
     """
     Generate TTS audio from FormData (for web frontend).
     Uses chunked generation for long texts.
+    Enforces usage limits based on subscription plan.
     """
     start_time = time.time()
     
@@ -207,11 +211,46 @@ async def generate_tts_form(
         )
     
     text = text.strip()
-    if len(text) > 10000:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Văn bản quá dài. Tối đa 10000 ký tự."
-        )
+    text_length = len(text)
+    
+    # Get user limits info
+    if current_user:
+        user_id = str(current_user["_id"])
+        limits_info = await audio_service.get_user_limits_info(user_id)
+        
+        # Check text length limit
+        max_text_length = limits_info["limits"]["max_text_length"]
+        if text_length > max_text_length:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Văn bản quá dài. Tối đa {max_text_length} ký tự cho gói {limits_info['plan']}. Bạn đang có {text_length} ký tự."
+            )
+        
+        # Check daily audio limit
+        daily_limit = limits_info["limits"]["daily_audio_limit"]
+        daily_used = limits_info["usage"]["daily_audio_count"]
+        if daily_limit > 0 and daily_used >= daily_limit:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Bạn đã sử dụng hết {daily_limit} lượt TTS hôm nay. Nâng cấp gói để sử dụng thêm."
+            )
+        
+        # Check monthly chars limit
+        monthly_limit = limits_info["limits"]["monthly_chars_limit"]
+        monthly_used = limits_info["usage"]["monthly_chars_used"]
+        if monthly_limit > 0 and monthly_used + text_length > monthly_limit:
+            remaining = max(0, monthly_limit - monthly_used)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Bạn đã sử dụng hết giới hạn ký tự tháng này. Còn lại {remaining} ký tự."
+            )
+    else:
+        # Anonymous users - use free limits
+        if text_length > 500:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Văn bản quá dài. Tối đa 500 ký tự cho người dùng chưa đăng nhập."
+            )
     
     # Validate voice_id
     valid_voices = ["Ly", "Tuyen", "Vinh", "Doan"]
@@ -224,7 +263,7 @@ async def generate_tts_form(
         format = "wav"
     
     user_id = str(current_user["_id"]) if current_user else "anonymous"
-    logger.info(f"TTS FormData: user={user_id}, text_len={len(text)}, voice={voice_id}")
+    logger.info(f"TTS FormData: user={user_id}, text_len={text_length}, voice={voice_id}")
     
     try:
         engine = get_tts_engine()
@@ -253,6 +292,16 @@ async def generate_tts_form(
                 detail=f"Tạo audio thất bại: {result.error}"
             )
         
+        # Check duration limit AFTER generation (estimated)
+        estimated_duration = len(text) / 15  # ~15 chars per second
+        if current_user:
+            max_duration = limits_info["limits"]["max_duration"]
+            if estimated_duration > max_duration:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Audio quá dài ({estimated_duration:.0f}s). Tối đa {max_duration}s cho gói {limits_info['plan']}."
+                )
+        
         # Save audio to temp file
         import soundfile as sf
         output_file = tempfile.NamedTemporaryFile(suffix=f".{format}", delete=False)
@@ -261,6 +310,22 @@ async def generate_tts_form(
         
         processing_time = (time.time() - start_time) * 1000
         logger.info(f"TTS generated in {processing_time:.0f}ms ({result.successful_chunks}/{result.total_chunks} chunks): {output_file.name}")
+        
+        # Log usage for authenticated users
+        if current_user:
+            from api.dependencies import get_db
+            db = get_db()
+            await db.usage_logs.insert_one({
+                "user_id": ObjectId(str(current_user["_id"])),
+                "action": "tts_generate",
+                "timestamp": datetime.utcnow(),
+                "characters_used": text_length,
+                "metadata": {
+                    "voice": voice_id,
+                    "duration": estimated_duration,
+                    "plan": limits_info["plan"]
+                }
+            })
         
         return FileResponse(
             path=output_file.name,
@@ -421,10 +486,14 @@ async def generate_tts_stream(
 async def submit_tts_job(
     text: str = Form(...),
     voice_id: str = Form(default="Ly"),
+    session_id: str = Form(default=None),
     current_user: Optional[dict] = Depends(get_current_user_optional),
+    audio_service: AudioService = Depends(get_audio_service),
+    request: Request = None,
 ):
     """
     Submit a TTS job for async processing.
+    Enforces usage limits based on subscription plan.
     
     Returns a job_id that can be used to track progress and get results.
     """
@@ -435,21 +504,46 @@ async def submit_tts_job(
         )
     
     text = text.strip()
-    if len(text) > 10000:
+    text_length = len(text)
+    
+    # Get user info
+    user_id = str(current_user["_id"]) if current_user else None
+    # Use session_id from form, or generate one if not provided
+    if not current_user:
+        if not session_id:
+            client_host = request.client.host if request else "unknown"
+            session_id = hashlib.md5(f"{client_host}_{time.time()}".encode()).hexdigest()[:16]
+    
+    # Check limits using SubscriptionService
+    from services.subscription_service import SubscriptionService
+    sub_service = SubscriptionService(audio_service.db)
+    allowed, error_msg, quota_info = await sub_service.check_limits(
+        text=text,
+        user_id=user_id,
+        session_id=session_id,
+    )
+    
+    if not allowed:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Văn bản quá dài. Tối đa 10000 ký tự."
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=error_msg
         )
+    
+    limits_info = quota_info
     
     valid_voices = ["Ly", "Tuyen", "Vinh", "Doan"]
     if voice_id not in valid_voices:
         voice_id = "Ly"
     
-    user_id = str(current_user["_id"]) if current_user else "anonymous"
-    logger.info(f"TTS Job: user={user_id}, voice={voice_id}, chars={len(text)}")
+    user_id_for_job = str(current_user["_id"]) if current_user else "anonymous"
+    if not current_user:
+        logger.info(f"TTS Job: user=anonymous, session={session_id[:8]}..., voice={voice_id}, chars={text_length}")
+    else:
+        session_id = None
+        logger.info(f"TTS Job: user={user_id_for_job}, voice={voice_id}, chars={text_length}")
     job_id = hashlib.md5(f"{user_id}_{time.time()}".encode()).hexdigest()[:12]
     
-    # Store job info
+    # Store job info with limits info for duration check later
     _active_jobs[job_id] = {
         "job_id": job_id,
         "text": text,
@@ -459,6 +553,10 @@ async def submit_tts_job(
         "created_at": time.time(),
         "result": None,
         "error": None,
+        "user_id": user_id_for_job,
+        "session_id": session_id,
+        "text_length": text_length,
+        "plan": limits_info.get("plan", {}).get("name", "Miễn phí") if current_user else "anonymous",
     }
     
     # Start background generation
@@ -523,6 +621,20 @@ async def process_tts_job(job_id: str, text: str, voice_id: str):
             sf.write(output_file.name, result.audio, engine.sample_rate)
             output_file.close()
             
+            # Check duration limit after generation
+            job_info = _active_jobs.get(job_id, {})
+            plan = job_info.get("plan", "anonymous")
+            if plan != "anonymous":
+                estimated_duration = len(job_info.get("text", "")) / 15  # ~15 chars per second
+                from core.config import get_subscription_limits
+                limits = get_subscription_limits()
+                max_duration = limits.get_max_duration(plan)
+                if estimated_duration > max_duration:
+                    _active_jobs[job_id]["status"] = "failed"
+                    _active_jobs[job_id]["error"] = f"Audio quá dài ({estimated_duration:.0f}s). Tối đa {max_duration}s cho gói {plan}."
+                    os.unlink(output_file.name)
+                    return
+            
             _active_jobs[job_id]["status"] = "completed"
             _active_jobs[job_id]["result"] = {
                 "file": output_file.name,
@@ -530,6 +642,77 @@ async def process_tts_job(job_id: str, text: str, voice_id: str):
                 "total_chunks": result.total_chunks,
                 "duration_ms": result.total_duration_ms,
             }
+            
+            # Save audio to database for history (all users including anonymous)
+            job_info = _active_jobs[job_id]
+            current_user = job_info.get("user_id")
+            session_id = job_info.get("session_id")
+            
+            if current_user or session_id:
+                from bson import ObjectId
+                from core.database import get_database
+                try:
+                    db = get_database()
+                    
+                    # Read audio file
+                    async with aiofiles.open(output_file.name, "rb") as f:
+                        audio_data = await f.read()
+                    
+                    filesize = len(audio_data)
+                    duration = result.total_duration_ms / 1000 if result.total_duration_ms else 0
+                    
+                    # Determine user identifier
+                    if current_user and current_user != "anonymous":
+                        user_id_obj = ObjectId(current_user)
+                        is_anonymous = False
+                    else:
+                        # Use session_id for anonymous users
+                        user_id_obj = session_id
+                        is_anonymous = True
+                    
+                    # Save to audio_files collection
+                    audio_doc = {
+                        "user_id": user_id_obj,
+                        "is_anonymous": is_anonymous,
+                        "filename": f"tts_{job_id}.wav",
+                        "filepath": output_file.name,
+                        "filesize": filesize,
+                        "duration": duration,
+                        "text_input": text[:500],  # Store first 500 chars
+                        "voice_id": voice_id,
+                        "format": "wav",
+                        "is_watermarked": False,
+                        "download_count": 0,
+                        "created_at": datetime.utcnow(),
+                        "metadata": {
+                            "job_id": job_id,
+                            "plan": plan,
+                            "characters_used": job_info.get("text_length", 0)
+                        }
+                    }
+                    
+                    insert_result = await db.audio_files.insert_one(audio_doc)
+                    audio_id = str(insert_result.inserted_id)
+                    logger.info(f"✓ Saved audio to DB: {audio_id} for job {job_id} (anonymous={is_anonymous})")
+                    
+                    # Also log to usage_logs (only for logged-in users)
+                    if not is_anonymous:
+                        await db.usage_logs.insert_one({
+                            "user_id": ObjectId(current_user),
+                            "action": "tts_generate",
+                            "timestamp": datetime.utcnow(),
+                            "characters_used": job_info.get("text_length", 0),
+                            "metadata": {
+                                "voice": voice_id,
+                                "duration": duration,
+                                "plan": plan,
+                                "audio_id": audio_id
+                            }
+                        })
+                except Exception as e:
+                    logger.error(f"Failed to save audio: {e}")
+                    import traceback
+                    traceback.print_exc()
         else:
             _active_jobs[job_id]["status"] = "failed"
             _active_jobs[job_id]["error"] = result.error
@@ -717,22 +900,41 @@ async def generate_tts(
 async def list_audios(
     page: int = 1,
     per_page: int = 20,
-    current_user: dict = Depends(get_current_user),
-    audio_service: AudioService = Depends(get_audio_service)
+    current_user: Optional[dict] = Depends(get_current_user_optional),
+    audio_service: AudioService = Depends(get_audio_service),
+    request: Request = None,
 ):
-    """List user's audio files with pagination."""
-    user_id = str(current_user["_id"])
+    """List user's audio files with pagination (supports anonymous)."""
+    # For anonymous users, use session_id header
+    session_id = None
+    if not current_user:
+        session_id = request.headers.get("X-Session-ID") if request else None
+    
+    user_id = str(current_user["_id"]) if current_user else None
     
     audios, total = await audio_service.list_user_audios(
         user_id=user_id,
+        session_id=session_id if not current_user else None,
         page=page,
         per_page=min(per_page, 100)
     )
     
     pages = (total + per_page - 1) // per_page if per_page > 0 else 0
     
+    # Convert audio data to AudioResponse format
+    from models.schemas.audio import AudioFormat
+    items = []
+    for a in audios:
+        try:
+            a["format"] = AudioFormat(a.get("format", "wav"))
+            a["user_id"] = str(a.get("user_id", "")) if a.get("user_id") else ""
+            items.append(AudioResponse(**a))
+        except Exception as e:
+            logger.warning(f"Skipping audio item due to format error: {e}")
+            continue
+    
     return AudioListResponse(
-        items=[AudioResponse(**a) for a in audios],
+        items=items,
         total=total,
         page=page,
         per_page=per_page,
@@ -951,6 +1153,140 @@ async def delete_cloned_voice(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete voice"
         )
+
+
+# ===========================================
+# Admin Audio Management
+# ===========================================
+
+@router.get(
+    "/admin/list",
+    summary="Admin: List all audio files",
+    description="Get paginated list of all audio files across all users (admin only).",
+)
+async def admin_list_audios(
+    page: int = 1,
+    per_page: int = 20,
+    user_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """List all audio files with optional filtering (admin only)."""
+    # Verify admin
+    try:
+        from api.dependencies import get_current_admin_user
+        await get_current_admin_user(current_user)
+    except:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        # Build query
+        query = {}
+        if user_id:
+            query["user_id"] = ObjectId(user_id)
+        
+        # Get total count
+        total = await db.audio_files.count_documents(query)
+        
+        # Get paginated results
+        skip = (page - 1) * per_page
+        cursor = db.audio_files.find(query).sort("created_at", -1).skip(skip).limit(per_page)
+        
+        audios = []
+        async for audio in cursor:
+            # Get user info
+            user = await db.users.find_one({"_id": audio["user_id"]})
+            audio["id"] = str(audio.pop("_id"))
+            audio["user_id"] = str(audio["user_id"])
+            audio["user_email"] = user.get("email", "Unknown") if user else "Unknown"
+            audio["user_name"] = user.get("name", "") if user else ""
+            audios.append(audio)
+        
+        pages = (total + per_page - 1) // per_page if per_page > 0 else 0
+        
+        return {
+            "items": audios,
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "pages": pages
+        }
+    except Exception as e:
+        logger.error(f"Admin list audios error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/admin/stats",
+    summary="Admin: Get audio statistics",
+    description="Get audio generation statistics (admin only).",
+)
+async def admin_audio_stats(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Get audio generation statistics (admin only)."""
+    try:
+        # Verify admin
+        from api.dependencies import get_current_admin_user
+        await get_current_admin_user(current_user)
+    except:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        # Total audios
+        total_audios = await db.audio_files.count_documents({})
+        
+        # Total size
+        pipeline_size = [
+            {"$group": {"_id": None, "total_size": {"$sum": "$filesize"}}}
+        ]
+        size_result = await db.audio_files.aggregate(pipeline_size).to_list(length=1)
+        total_size = size_result[0]["total_size"] if size_result else 0
+        
+        # Audios today
+        today_start = datetime.now(VIETNAM_TZ).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start_utc = today_start.astimezone(timezone.utc)
+        audios_today = await db.audio_files.count_documents({
+            "created_at": {"$gte": today_start_utc}
+        })
+        
+        # Audios by voice
+        pipeline_voice = [
+            {"$group": {"_id": "$voice_id", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}}
+        ]
+        voice_stats = await db.audio_files.aggregate(pipeline_voice).to_list(length=10)
+        
+        # Audios by user (top 10)
+        pipeline_user = [
+            {"$group": {"_id": "$user_id", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 10}
+        ]
+        user_stats = await db.audio_files.aggregate(pipeline_user).to_list(length=10)
+        
+        # Enrich user stats with email
+        enriched_user_stats = []
+        for stat in user_stats:
+            user = await db.users.find_one({"_id": stat["_id"]})
+            enriched_user_stats.append({
+                "user_id": str(stat["_id"]),
+                "email": user.get("email", "Unknown") if user else "Unknown",
+                "count": stat["count"]
+            })
+        
+        return {
+            "total_audios": total_audios,
+            "total_size_bytes": total_size,
+            "total_size_mb": round(total_size / (1024 * 1024), 2),
+            "audios_today": audios_today,
+            "by_voice": [{"voice_id": v["_id"], "count": v["count"]} for v in voice_stats],
+            "top_users": enriched_user_stats
+        }
+    except Exception as e:
+        logger.error(f"Admin audio stats error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ===========================================

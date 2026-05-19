@@ -146,16 +146,62 @@
         </div>
     </nav>
 
-    <div class="mobile-menu">
-        <a href="/">Trang chủ</a>
+    <div class="navbar-menu">
+        <a href="/" class="active">Trang chủ</a>
         <a href="/about">Giới thiệu</a>
-        <a href="/tts" class="active">TTS</a>
+        <a href="/pricing">Bảng giá</a>
+        <a href="/tts">TTS</a>
     </div>
 
     <div class="tts-main">
         <div class="tts-header">
             <h1>Text to Speech</h1>
             <p>Chuyển văn bản thành giọng nói tiếng Việt tự nhiên</p>
+        </div>
+
+        <!-- User Quota Display -->
+        <div id="userQuotaDisplay" style="margin-bottom: 24px;">
+            <div style="background: var(--bg-white); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div id="quotaPlanBadge" style="padding: 6px 16px; border-radius: 50px; font-size: 13px; font-weight: 600; background: rgba(107,114,128,0.1); color: #6B7280;">Free</div>
+                        <span style="font-size: 14px; color: var(--text-gray);" id="quotaExpiryInfo"></span>
+                    </div>
+                    <a href="/pricing" style="color: var(--primary); font-size: 14px; text-decoration: none; font-weight: 500;">Nâng cấp →</a>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 12px; color: var(--text-gray);">Lượt TTS hôm nay</span>
+                            <span style="font-size: 12px; font-weight: 600;" id="quotaDailyUsed">-/-</span>
+                        </div>
+                        <div style="height: 6px; background: var(--bg-gray); border-radius: 3px; overflow: hidden;">
+                            <div id="quotaDailyBar" style="height: 100%; background: var(--primary); width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 12px; color: var(--text-gray);">Ký tự tháng</span>
+                            <span style="font-size: 12px; font-weight: 600;" id="quotaCharsUsed">-/-</span>
+                        </div>
+                        <div style="height: 6px; background: var(--bg-gray); border-radius: 3px; overflow: hidden;">
+                            <div id="quotaCharsBar" style="height: 100%; background: #3B82F6; width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 12px; color: var(--text-gray);">Text tối đa</span>
+                            <span style="font-size: 12px; font-weight: 600;" id="quotaMaxLength">- ký tự</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 12px; color: var(--text-gray);">Audio tối đa</span>
+                            <span style="font-size: 12px; font-weight: 600;" id="quotaMaxDuration">- giây</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="tts-tabs">
@@ -260,60 +306,12 @@
                 </button>
             </div>
         </div>
-            <div style="margin-bottom: 20px;">
-                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Văn bản</label>
-                <textarea id="textInput" class="tts-textarea" style="min-height: 150px; border: 2px solid var(--border); border-radius: var(--radius-sm); width: 100%;" placeholder="Nhập văn bản tiếng Việt...">Bản thân tôi đã từng có cơ hội làm việc trong một môi trường sản xuất với nhiều nguy cơ tiềm ẩn. Mỗi ngày, tôi đều được nhắc nhở về tầm quan trọng của việc tuân thủ các quy định an toàn, sử dụng thành thạo các trang thiết bị bảo hộ lao động. Nhờ sự quan tâm của ban lãnh đạo và ý thức trách nhiệm của bản thân, tôi đã may mắn hoàn thành công việc một cách an toàn và hiệu quả.</textarea>
-                <div style="text-align: right; font-size: 12px; color: var(--text-gray); margin-top: 4px;"><span id="charCount">0</span> / 10000</div>
-            </div>
-
-            <div style="margin-bottom: 20px;">
-                <label style="font-weight: 600; display: block; margin-bottom: 12px;">Chọn giọng</label>
-                <div class="voice-grid" id="voiceGrid">
-                    <div class="voice-card selected" data-voice="Ly" onclick="selectVoice(this)"><div class="voice-name">Trúc Ly</div><div class="voice-desc">Nữ miền Bắc</div></div>
-                    <div class="voice-card" data-voice="Tuyen" onclick="selectVoice(this)"><div class="voice-name">Tuyên</div><div class="voice-desc">Nam miền Bắc</div></div>
-                    <div class="voice-card" data-voice="Vinh" onclick="selectVoice(this)"><div class="voice-name">Xuân Vĩnh</div><div class="voice-desc">Nam miền Nam</div></div>
-                    <div class="voice-card" data-voice="Doan" onclick="selectVoice(this)"><div class="voice-name">Thục Đoan</div><div class="voice-desc">Nữ miền Nam</div></div>
-                </div>
-            </div>
-
-            <div style="margin-top: 20px;">
-                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Định dạng</label>
-                <select id="formatSelect" style="padding: 8px 16px; border: 2px solid var(--border); border-radius: var(--radius-sm);">
-                    <option value="wav">WAV</option>
-                    <option value="mp3">MP3</option>
-                </select>
-            </div>
-
-            <div class="tts-progress-container" id="progressContainer">
-                <div class="tts-progress-bar-wrapper">
-                    <div class="tts-progress-bar" id="ttsProgressBar"></div>
-                </div>
-                <div class="tts-progress-info">
-                    <div>
-                        <div class="tts-progress-text" id="ttsProgressText">Đang xử lý...</div>
-                        <div class="tts-status-text" id="ttsStatusText"></div>
-                    </div>
-                    <button class="cancel-btn" id="cancelBtn" onclick="handleCancel()" style="display: none;">Hủy</button>
-                </div>
-            </div>
-
-            <div class="generation-info" id="generationInfo">
-                <div class="info-row"><span>Số chunks:</span><span id="infoChunks">-</span></div>
-                <div class="info-row"><span>Thời gian:</span><span id="infoTime">-</span></div>
-            </div>
-
-            <div style="margin-top: 24px; text-align: center;">
-                <button id="generateBtn" onclick="generateAudio()" style="background: linear-gradient(135deg, #FF6B35 0%, #FF8C5A 100%); color: white; border: none; padding: 16px 48px; font-size: 18px; font-weight: 600; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);">
-                    Tạo audio
-                </button>
-            </div>
-        </div>
 
         <div class="tab-content" id="tab-history">
             <div class="history-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3>Lịch sử audio</h3>
                 <div class="history-filters">
-                    <select id="historyFilter" onchange="loadHistory()" style="padding: 8px 16px; border: 2px solid var(--border); border-radius: var(--radius-sm);">
+                    <select id="historyFilter" onchange="loadServerHistory()" style="padding: 8px 16px; border: 2px solid var(--border); border-radius: var(--radius-sm);">
                         <option value="all">Tất cả</option>
                         <option value="preset">Preset</option>
                         <option value="clone">Clone</option>
@@ -346,7 +344,7 @@
     <script type="text/javascript">
     var selectedVoice = 'Ly';
     var currentAudioUrl = null;
-    var history = [];
+    var ttsHistory = [];
     var currentJobId = null;
     var isGenerating = false;
     var selectedCloneVoice = null;
@@ -374,7 +372,7 @@
                 var targetTab = document.getElementById('tab-' + tab.dataset.tab);
                 if (targetTab) targetTab.classList.add('active');
                 if (tab.dataset.tab === 'clone') loadClonedVoices();
-                if (tab.dataset.tab === 'history') loadHistory();
+                if (tab.dataset.tab === 'history') loadServerHistory();
             });
         });
     }
@@ -429,6 +427,14 @@
         var textEl = document.getElementById('textInput');
         var text = textEl ? textEl.value.trim() : '';
         if (!text) { showError('Vui lòng nhập văn bản.'); return; }
+        
+        // Check limits before generating
+        var limitCheck = checkTTsLimits();
+        if (!limitCheck.canGenerate) {
+            showError(limitCheck.message);
+            return;
+        }
+        
         if (text.length > 10000) { showError('Văn bản quá dài. Tối đa 10000 ký tự.'); return; }
 
         var btn = document.getElementById('generateBtn');
@@ -448,8 +454,11 @@
             fd.append('voice_id', selectedVoice);
             fd.append('format', 'wav');
             var token = getAuthToken();
+            var sessionId = getSessionId();
+            fd.append('session_id', sessionId);
             var headers = {};
             if (token) headers['Authorization'] = 'Bearer ' + token;
+            headers['X-Session-ID'] = sessionId;
 
             var resp;
             try {
@@ -490,7 +499,6 @@
                     currentAudioUrl = url;
                     updateProgress(100, 100, 'Hoàn thành!');
                     showGenInfo(js.result ? js.result.chunks : 0, js.result ? js.result.duration_ms : 0);
-                    addToHistory(text, selectedVoice);
                     break;
                 } else if (js.status === 'failed') {
                     throw new Error(js.error || 'Tạo audio thất bại');
@@ -529,50 +537,6 @@
         var a = document.getElementById('audioPlayer');
         if (a) { if (a.paused) a.play(); else a.pause(); }
     }
-    function addToHistory(text, voice) {
-        history.unshift({ id: Date.now(), text: text.substring(0, 80) + '...', fullText: text, voice: voice, time: new Date().toLocaleString('vi-VN') });
-        if (history.length > 20) history = history.slice(0, 20);
-        localStorage.setItem('tts_history', JSON.stringify(history));
-        renderHistory();
-    }
-    function loadHistory() {
-        var s = localStorage.getItem('tts_history');
-        if (s && s.trim()) { 
-            try { 
-                history = JSON.parse(s); 
-                if (!Array.isArray(history)) history = [];
-            } catch(e) { 
-                history = []; 
-            }
-        } else {
-            history = [];
-        }
-        renderHistory();
-    }
-    function renderHistory() {
-        var c = document.getElementById('historyList');
-        if (!c) return;
-        if (!Array.isArray(history) || !history.length) { 
-            c.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-gray)">Chưa có lịch sử</div>'; 
-            return; 
-        }
-        var html = '';
-        for (var i = 0; i < history.length; i++) {
-            var h = history[i];
-            html += '<div class="history-item" onclick="loadFromHistory(' + h.id + ')"><span class="text">' + h.voice + ': ' + h.text + '</span><span class="time">' + h.time + '</span></div>';
-        }
-        c.innerHTML = html;
-    }
-    function loadFromHistory(id) {
-        var h = history.find(function(x) { return x.id === id; });
-        if (h) {
-            var t = document.getElementById('textInput');
-            if (t) t.value = h.fullText;
-            updateCharCount();
-            document.querySelectorAll('.voice-card').forEach(function(c) { c.classList.toggle('selected', c.dataset.voice === h.voice); });
-            selectedVoice = h.voice;
-        }
-    }
     function updateCharCount() {
         var t = document.getElementById('textInput');
         var c = document.getElementById('charCount');
@@ -585,6 +549,187 @@
         if (token && user && nav) {
             var u = JSON.parse(user);
             nav.innerHTML = '<span style="font-size:14px;color:var(--text-gray)">Xin chào, ' + (u.email || 'User') + '</span> <button class="btn btn-outline" onclick="logout()">Đăng xuất</button>';
+        }
+        
+        // Load user quota
+        loadUserQuota();
+    }
+    
+    async function loadUserQuota() {
+        var token = localStorage.getItem('auth_token');
+        if (!token) {
+            document.getElementById('userQuotaDisplay').style.display = 'none';
+            return;
+        }
+        
+        try {
+            var resp = await fetch('http://localhost:8000/api/user/usage', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            
+            if (!resp.ok) {
+                document.getElementById('userQuotaDisplay').style.display = 'none';
+                return;
+            }
+            
+            var quota = await resp.json();
+            
+            // Plan colors and names
+            var planColors = { free: 'rgba(107,114,128,0.1)', plus: 'rgba(59,130,246,0.1)', pro: 'rgba(139,92,246,0.1)' };
+            var planTextColors = { free: '#6B7280', plus: '#3B82F6', pro: '#8B5CF6' };
+            var planNames = { free: 'Free', plus: 'Plus', pro: 'Pro' };
+            
+            var plan = quota.subscription_plan || 'free';
+            
+            // Update plan badge
+            var planBadge = document.getElementById('quotaPlanBadge');
+            if (planBadge) {
+                planBadge.textContent = planNames[plan] || 'Free';
+                planBadge.style.background = planColors[plan] || planColors.free;
+                planBadge.style.color = planTextColors[plan] || planTextColors.free;
+            }
+            
+            // Update expiry info
+            var expiryInfo = document.getElementById('quotaExpiryInfo');
+            if (expiryInfo) {
+                expiryInfo.textContent = plan === 'free' ? 'Không giới hạn thời gian' : 'Gói có thời hạn';
+            }
+            
+            // Update daily usage
+            var dailyUsed = document.getElementById('quotaDailyUsed');
+            var dailyLimit = quota.daily_audio_limit || 10;
+            var dailyCount = quota.daily_audio_count || 0;
+            if (dailyUsed) {
+                dailyUsed.textContent = dailyCount + '/' + dailyLimit;
+                dailyUsed.style.color = dailyCount >= dailyLimit ? '#EF4444' : '#10B981';
+            }
+            var dailyBar = document.getElementById('quotaDailyBar');
+            if (dailyBar) {
+                var dailyPercent = dailyLimit > 0 ? (dailyCount / dailyLimit * 100) : 0;
+                dailyBar.style.width = Math.min(100, dailyPercent) + '%';
+                dailyBar.style.background = dailyPercent > 80 ? '#EF4444' : '#10B981';
+            }
+            
+            // Update chars usage
+            var charsUsed = document.getElementById('quotaCharsUsed');
+            var charsLimit = quota.monthly_chars_limit || 10000;
+            var charsCount = quota.monthly_characters || 0;
+            if (charsUsed) {
+                charsUsed.textContent = charsCount.toLocaleString() + '/' + charsLimit.toLocaleString();
+                charsUsed.style.color = charsCount >= charsLimit ? '#EF4444' : '#3B82F6';
+            }
+            var charsBar = document.getElementById('quotaCharsBar');
+            if (charsBar) {
+                var charsPercent = charsLimit > 0 ? (charsCount / charsLimit * 100) : 0;
+                charsBar.style.width = Math.min(100, charsPercent) + '%';
+                charsBar.style.background = charsPercent > 80 ? '#EF4444' : '#10B981';
+            }
+            
+            // Update max length
+            var maxLength = document.getElementById('quotaMaxLength');
+            if (maxLength) {
+                maxLength.textContent = (quota.max_text_length || 500).toLocaleString() + ' ký tự';
+            }
+            
+            // Update max duration
+            var maxDuration = document.getElementById('quotaMaxDuration');
+            if (maxDuration) {
+                var duration = quota.max_duration || 30;
+                maxDuration.textContent = duration + ' giây';
+            }
+            
+            // Update char count display
+            updateCharCountDisplay();
+            
+        } catch(e) {
+            console.error('Failed to load quota:', e);
+            document.getElementById('userQuotaDisplay').style.display = 'none';
+        }
+    }
+    
+    function getUserQuotaInfo() {
+        var token = localStorage.getItem('auth_token');
+        if (!token) {
+            return {
+                daily_limit: 10,
+                daily_used: 0,
+                chars_limit: 10000,
+                chars_used: 0,
+                max_text_length: 500,
+                max_duration: 30
+            };
+        }
+        return window.userQuotaCache || {
+            daily_limit: 10,
+            daily_used: 0,
+            chars_limit: 10000,
+            chars_used: 0,
+            max_text_length: 500,
+            max_duration: 30
+        };
+    }
+    
+    function checkTTsLimits() {
+        var token = localStorage.getItem('auth_token');
+        var textInput = document.getElementById('textInput');
+        if (!textInput) return { canGenerate: true, message: '' };
+        
+        var textLength = textInput.value.length;
+        
+        if (!token) {
+            // Anonymous user
+            if (textLength > 500) {
+                return { canGenerate: false, message: 'Văn bản quá dài. Tối đa 500 ký tự cho người dùng chưa đăng nhập.' };
+            }
+            return { canGenerate: true, message: '' };
+        }
+        
+        var quota = getUserQuotaInfo();
+        
+        // Check daily limit
+        if (quota.daily_used >= quota.daily_limit && quota.daily_limit > 0) {
+            return { canGenerate: false, message: 'Bạn đã sử dụng hết lượt TTS hôm nay. Nâng cấp gói để sử dụng thêm.' };
+        }
+        
+        // Check text length
+        if (textLength > quota.max_text_length) {
+            return { canGenerate: false, message: `Văn bản quá dài. Tối đa ${quota.max_text_length} ký tự cho gói hiện tại.` };
+        }
+        
+        // Check chars limit
+        if (quota.chars_used + textLength > quota.chars_limit && quota.chars_limit > 0) {
+            var remaining = Math.max(0, quota.chars_limit - quota.chars_used);
+            return { canGenerate: false, message: `Bạn đã sử dụng hết giới hạn ký tự tháng này. Còn lại ${remaining} ký tự.` };
+        }
+        
+        return { canGenerate: true, message: '' };
+    }
+    
+    function updateCharCountDisplay() {
+        var textInput = document.getElementById('textInput');
+        var charCountEl = document.getElementById('charCount');
+        var charLimitEl = document.getElementById('charLimit');
+        
+        if (!textInput || !charCountEl) return;
+        
+        var textLength = textInput.value.length;
+        var quota = getUserQuotaInfo();
+        var maxLength = quota.max_text_length || 500;
+        
+        if (charCountEl) {
+            charCountEl.textContent = textLength.toLocaleString();
+            // Color based on limit
+            if (textLength > maxLength) {
+                charCountEl.style.color = '#EF4444';
+            } else if (textLength > maxLength * 0.8) {
+                charCountEl.style.color = '#F59E0B';
+            } else {
+                charCountEl.style.color = 'var(--text-gray)';
+            }
+        }
+        
+        if (charLimitEl) {
+            charLimitEl.textContent = maxLength.toLocaleString();
         }
     }
     function logout() { localStorage.removeItem('auth_token'); localStorage.removeItem('user'); window.location.reload(); }
@@ -755,7 +900,17 @@
     // ===========================================
     // Server-side History Functions
     // ===========================================
-    async function loadHistory(page) {
+    // Generate session ID for anonymous users
+    function getSessionId() {
+        var sid = sessionStorage.getItem('tts_session_id');
+        if (!sid) {
+            sid = 'anon_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            sessionStorage.setItem('tts_session_id', sid);
+        }
+        return sid;
+    }
+    
+    async function loadServerHistory(page) {
         if (!page) page = 1;
         historyPage = page;
         var container = document.getElementById('historyList');
@@ -763,19 +918,20 @@
         container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-gray);">Đang tải...</div>';
         try {
             var token = getAuthToken();
-            if (!token) {
-                container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-gray);">Vui lòng <a href="/login">đăng nhập</a> để xem lịch sử.</div>';
-                return;
-            }
+            var sessionId = getSessionId();
+            var headers = {};
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+            headers['X-Session-ID'] = sessionId;
+            
             var resp = await fetch('http://localhost:8000/api/audio/list?page=' + page + '&per_page=10', {
-                headers: { 'Authorization': 'Bearer ' + token }
+                headers: headers
             });
             if (!resp.ok) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-gray);">Không tải được lịch sử.</div>'; return; }
             var data = await resp.json();
             historyTotal = data.total || 0;
             var items = data.items || [];
             if (items.length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-gray);">Chưa có audio nào.</div>';
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-gray);">Chưa có audio nào. Hãy tạo audio đầu tiên!</div>';
                 document.getElementById('historyPagination').style.display = 'none';
                 return;
             }
@@ -815,7 +971,7 @@
         container.style.display = 'flex';
         var html = '';
         for (var i = 1; i <= totalPages; i++) {
-            html += '<button class="pagination-btn ' + (i === historyPage ? 'active' : '') + '" onclick="loadHistory(' + i + ')">' + i + '</button>';
+            html += '<button class="pagination-btn ' + (i === historyPage ? 'active' : '') + '" onclick="loadServerHistory(' + i + ')">' + i + '</button>';
         }
         container.innerHTML = html;
     }
@@ -832,8 +988,12 @@
         var a = document.createElement('a');
         a.href = 'http://localhost:8000/api/audio/' + audioId + '/download';
         a.download = filename || 'audio.wav';
-        a.headers = { 'Authorization': 'Bearer ' + token };
+        if (token) {
+            a.setRequestHeader('Authorization', 'Bearer ' + token);
+        }
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
     }
     async function deleteHistoryAudio(audioId) {
         if (!confirm('Xóa audio này?')) return;
@@ -853,7 +1013,7 @@
         initCloneUpload();
         updateCharCount();
         updateUserStatus();
-        loadHistory();
+        loadServerHistory();
         var ta = document.getElementById('textInput');
         if (ta) ta.addEventListener('input', updateCharCount);
     });

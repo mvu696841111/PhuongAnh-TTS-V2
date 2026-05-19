@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Auto Login Admin</title>
+    <style>
+        body { font-family: Arial; padding: 40px; background: #f0f0f0; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #FF6B35; }
+        button { background: #FF6B35; color: white; padding: 15px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin: 10px; }
+        button:hover { background: #E55A2B; }
+        .success { color: green; padding: 10px; background: #d4edda; border-radius: 5px; margin: 10px 0; }
+        .error { color: red; padding: 10px; background: #f8d7da; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Auto Login Admin</h1>
+        <p>Đăng nhập admin tự động để truy cập /admin</p>
+        
+        <button onclick="loginAndRedirect()">1. Đăng nhập & Đi tới Admin</button>
+        <button onclick="loginOnly()">2. Chỉ Đăng nhập</button>
+        <button onclick="checkStatus()">3. Kiểm tra Token</button>
+        
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:8000/api';
+        
+        async function login() {
+            const status = document.getElementById('status');
+            status.innerHTML = '<p>🔄 Đang đăng nhập...</p>';
+            
+            try {
+                const res = await fetch(`${API}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'admin@test.com',
+                        password: 'Admin123'
+                    })
+                });
+                
+                if (!res.ok) throw new Error('Login failed');
+                
+                const data = await res.json();
+                const token = data.access_token;
+                
+                // Save to localStorage
+                localStorage.setItem('auth_token', token);
+                localStorage.setItem('user_email', 'admin@test.com');
+                
+                return true;
+            } catch (e) {
+                status.innerHTML = `<div class="error">❌ Lỗi: ${e.message}</div>`;
+                return false;
+            }
+        }
+        
+        async function loginOnly() {
+            const success = await login();
+            const status = document.getElementById('status');
+            if (success) {
+                status.innerHTML = '<div class="success">✅ Đăng nhập thành công! Token đã lưu.</div>';
+            }
+        }
+        
+        async function loginAndRedirect() {
+            const success = await login();
+            if (success) {
+                window.location.href = '/admin';
+            }
+        }
+        
+        function checkStatus() {
+            const token = localStorage.getItem('auth_token');
+            const email = localStorage.getItem('user_email');
+            const status = document.getElementById('status');
+            
+            if (token) {
+                status.innerHTML = `
+                    <div class="success">
+                        ✅ Đã đăng nhập<br>
+                        <strong>Email:</strong> ${email || 'N/A'}<br>
+                        <strong>Token:</strong> ${token.substring(0, 50)}...<br>
+                        <br>
+                        <a href="/admin"><button>Đi tới Admin Dashboard</button></a>
+                    </div>
+                `;
+            } else {
+                status.innerHTML = '<div class="error">❌ Chưa đăng nhập</div>';
+            }
+        }
+        
+        // Auto check on load
+        checkStatus();
+    </script>
+</body>
+</html>
