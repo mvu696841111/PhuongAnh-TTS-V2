@@ -47,6 +47,84 @@
         .generation-info.show { display: block; }
         .generation-info .info-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
         .generation-info .info-row:last-child { margin-bottom: 0; }
+
+        /* Voice Cloning Styles */
+        .clone-container { display: flex; flex-direction: column; gap: 32px; }
+        .clone-section { background: var(--bg-gray); border-radius: var(--radius); padding: 24px; }
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background: var(--bg-white);
+        }
+        .upload-area:hover { border-color: var(--primary); background: rgba(255, 107, 53, 0.02); }
+        .upload-area.dragover { border-color: var(--primary); background: rgba(255, 107, 53, 0.05); }
+        .upload-icon { font-size: 48px; margin-bottom: 16px; }
+        .upload-text { font-size: 16px; font-weight: 500; color: var(--text-dark); margin-bottom: 8px; }
+        .upload-hint { font-size: 13px; color: var(--text-gray); }
+        .file-info { margin-top: 16px; padding: 12px; background: var(--bg-gray); border-radius: var(--radius-sm); }
+        .file-info .name { font-weight: 600; word-break: break-all; }
+        .file-info .size { font-size: 12px; color: var(--text-gray); margin-top: 4px; }
+        .voice-clone-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background: var(--bg-white);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .voice-clone-card:hover { border-color: var(--primary-light); }
+        .voice-clone-card.selected { border-color: var(--primary); background: rgba(255, 107, 53, 0.05); }
+        .voice-clone-info .name { font-weight: 600; }
+        .voice-clone-info .desc { font-size: 12px; color: var(--text-gray); margin-top: 2px; }
+        .voice-clone-actions { display: flex; gap: 8px; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; }
+        .btn-sm.delete { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
+        .btn-sm.delete:hover { background: #EF4444; color: white; }
+        .plan-required {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid #F59E0B;
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            text-align: center;
+            color: #B45309;
+        }
+        .plan-required a { color: var(--primary); text-decoration: underline; }
+        .alert-success {
+            background: #10B981;
+            color: white;
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            margin-top: 12px;
+        }
+        /* Server-side History Styles */
+        .history-server-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: var(--bg-gray);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            transition: var(--transition);
+        }
+        .history-server-item:hover { background: var(--border); }
+        .history-server-info { display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1; }
+        .hs-icon { font-size: 24px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bg-white); border-radius: 50%; }
+        .hs-details { flex: 1; }
+        .hs-text { font-weight: 500; color: var(--text-dark); margin-bottom: 4px; }
+        .hs-meta { font-size: 12px; color: var(--text-gray); }
+        .history-server-actions { display: flex; gap: 8px; }
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .history-header h3 { margin: 0; }
+        .history-filters select { padding: 8px 16px; border: 2px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-white); }
     </style>
 </head>
 <body class="tts-page">
@@ -82,10 +160,106 @@
 
         <div class="tts-tabs">
             <button class="tts-tab active" data-tab="preset">Preset Voices</button>
+            <button class="tts-tab" data-tab="clone">Voice Cloning</button>
             <button class="tts-tab" data-tab="history">Lịch sử</button>
         </div>
 
-        <div class="tab-content active" id="tab-preset">
+        <!-- Voice Cloning Tab -->
+        <div class="tab-content" id="tab-clone">
+            <div class="clone-container">
+                <div class="clone-section">
+                    <h3 style="margin-bottom: 16px;">📋 Tải lên mẫu giọng nói</h3>
+                    <p style="color: var(--text-gray); margin-bottom: 16px;">
+                        Tải lên file âm thanh 3-5 giây để tạo giọng nói riêng của bạn.<br>
+                        <strong>Chỉ áp dụng cho gói Plus/Pro.</strong>
+                    </p>
+                    
+                    <div class="upload-area" id="cloneUploadArea">
+                        <input type="file" id="cloneAudioInput" accept="audio/*" style="display: none;">
+                        <div class="upload-icon">🎤</div>
+                        <div class="upload-text">Kéo thả file audio hoặc click để chọn</div>
+                        <div class="upload-hint">Hỗ trợ: MP3, WAV, M4A, OGG (3-10 giây)</div>
+                        <div id="cloneFileInfo" class="file-info" style="display: none;"></div>
+                    </div>
+
+                    <div id="cloneWaveformContainer" style="display: none; margin: 16px 0;">
+                        <div id="cloneWaveform" style="height: 80px; background: var(--bg-gray); border-radius: var(--radius-sm);"></div>
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-gray); margin-top: 8px;">
+                            <span id="cloneDuration">0:00</span>
+                            <span id="cloneSampleStatus"></span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 16px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 8px;">Tên giọng (tùy chọn)</label>
+                        <input type="text" id="cloneVoiceName" class="form-input" placeholder="VD: Giọng của tôi" style="width: 100%; padding: 10px 16px; border: 2px solid var(--border); border-radius: var(--radius-sm);">
+                    </div>
+
+                    <button id="cloneBtn" onclick="uploadCloneAudio()" class="btn btn-primary" style="margin-top: 20px; width: 100%;" disabled>
+                        Tạo giọng clone
+                    </button>
+                </div>
+
+                <div class="clone-section">
+                    <h3 style="margin-bottom: 16px;">🎭 Giọng đã clone</h3>
+                    <div id="clonedVoicesList">
+                        <div style="text-align: center; padding: 40px; color: var(--text-gray);">
+                            Chưa có giọng clone nào. Hãy tải mẫu audio để tạo giọng riêng.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-preset">
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Văn bản</label>
+                <textarea id="textInput" class="tts-textarea" style="min-height: 150px; border: 2px solid var(--border); border-radius: var(--radius-sm); width: 100%;" placeholder="Nhập văn bản tiếng Việt...">Bản thân tôi đã từng có cơ hội làm việc trong một môi trường sản xuất với nhiều nguy cơ tiềm ẩn. Mỗi ngày, tôi đều được nhắc nhở về tầm quan trọng của việc tuân thủ các quy định an toàn, sử dụng thành thạo các trang thiết bị bảo hộ lao động. Nhờ sự quan tâm của ban lãnh đạo và ý thức trách nhiệm của bản thân, tôi đã may mắn hoàn thành công việc một cách an toàn và hiệu quả.</textarea>
+                <div style="text-align: right; font-size: 12px; color: var(--text-gray); margin-top: 4px;"><span id="charCount">0</span> / 10000</div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 12px;">Chọn giọng</label>
+                <div class="voice-grid" id="voiceGrid">
+                    <div class="voice-card selected" data-voice="Ly" onclick="selectVoice(this)"><div class="voice-name">Trúc Ly</div><div class="voice-desc">Nữ miền Bắc</div></div>
+                    <div class="voice-card" data-voice="Tuyen" onclick="selectVoice(this)"><div class="voice-name">Tuyên</div><div class="voice-desc">Nam miền Bắc</div></div>
+                    <div class="voice-card" data-voice="Vinh" onclick="selectVoice(this)"><div class="voice-name">Xuân Vĩnh</div><div class="voice-desc">Nam miền Nam</div></div>
+                    <div class="voice-card" data-voice="Doan" onclick="selectVoice(this)"><div class="voice-name">Thục Đoan</div><div class="voice-desc">Nữ miền Nam</div></div>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Định dạng</label>
+                <select id="formatSelect" style="padding: 8px 16px; border: 2px solid var(--border); border-radius: var(--radius-sm);">
+                    <option value="wav">WAV</option>
+                    <option value="mp3">MP3</option>
+                </select>
+            </div>
+
+            <div class="tts-progress-container" id="progressContainer">
+                <div class="tts-progress-bar-wrapper">
+                    <div class="tts-progress-bar" id="ttsProgressBar"></div>
+                </div>
+                <div class="tts-progress-info">
+                    <div>
+                        <div class="tts-progress-text" id="ttsProgressText">Đang xử lý...</div>
+                        <div class="tts-status-text" id="ttsStatusText"></div>
+                    </div>
+                    <button class="cancel-btn" id="cancelBtn" onclick="handleCancel()" style="display: none;">Hủy</button>
+                </div>
+            </div>
+
+            <div class="generation-info" id="generationInfo">
+                <div class="info-row"><span>Số chunks:</span><span id="infoChunks">-</span></div>
+                <div class="info-row"><span>Thời gian:</span><span id="infoTime">-</span></div>
+            </div>
+
+            <div style="margin-top: 24px; text-align: center;">
+                <button id="generateBtn" onclick="generateAudio()" style="background: linear-gradient(135deg, #FF6B35 0%, #FF8C5A 100%); color: white; border: none; padding: 16px 48px; font-size: 18px; font-weight: 600; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);">
+                    Tạo audio
+                </button>
+            </div>
+        </div>
             <div style="margin-bottom: 20px;">
                 <label style="font-weight: 600; display: block; margin-bottom: 8px;">Văn bản</label>
                 <textarea id="textInput" class="tts-textarea" style="min-height: 150px; border: 2px solid var(--border); border-radius: var(--radius-sm); width: 100%;" placeholder="Nhập văn bản tiếng Việt...">Bản thân tôi đã từng có cơ hội làm việc trong một môi trường sản xuất với nhiều nguy cơ tiềm ẩn. Mỗi ngày, tôi đều được nhắc nhở về tầm quan trọng của việc tuân thủ các quy định an toàn, sử dụng thành thạo các trang thiết bị bảo hộ lao động. Nhờ sự quan tâm của ban lãnh đạo và ý thức trách nhiệm của bản thân, tôi đã may mắn hoàn thành công việc một cách an toàn và hiệu quả.</textarea>
@@ -136,7 +310,18 @@
         </div>
 
         <div class="tab-content" id="tab-history">
-            <div id="historyList"><div style="text-align: center; padding: 40px; color: var(--text-gray);">Chưa có lịch sử</div></div>
+            <div class="history-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3>Lịch sử audio</h3>
+                <div class="history-filters">
+                    <select id="historyFilter" onchange="loadHistory()" style="padding: 8px 16px; border: 2px solid var(--border); border-radius: var(--radius-sm);">
+                        <option value="all">Tất cả</option>
+                        <option value="preset">Preset</option>
+                        <option value="clone">Clone</option>
+                    </select>
+                </div>
+            </div>
+            <div id="historyList"><div style="text-align: center; padding: 40px; color: var(--text-gray);">Đang tải...</div></div>
+            <div id="historyPagination" class="pagination" style="display: none;"></div>
         </div>
 
         <div class="audio-result" id="audioResult">
@@ -164,8 +349,22 @@
     var history = [];
     var currentJobId = null;
     var isGenerating = false;
+    var selectedCloneVoice = null;
+    var cloneAudioFile = null;
+    var clonedVoices = [];
+    var historyPage = 1;
+    var historyTotal = 0;
 
     function getAuthToken() { return localStorage.getItem('auth_token'); }
+    function getUserPlan() {
+        var user = localStorage.getItem('user');
+        if (user) {
+            try {
+                return JSON.parse(user).subscription_plan || 'free';
+            } catch(e) { return 'free'; }
+        }
+        return 'free';
+    }
     function initTabs() {
         document.querySelectorAll('.tts-tab').forEach(function(tab) {
             tab.addEventListener('click', function() {
@@ -174,6 +373,8 @@
                 tab.classList.add('active');
                 var targetTab = document.getElementById('tab-' + tab.dataset.tab);
                 if (targetTab) targetTab.classList.add('active');
+                if (tab.dataset.tab === 'clone') loadClonedVoices();
+                if (tab.dataset.tab === 'history') loadHistory();
             });
         });
     }
@@ -181,6 +382,14 @@
         document.querySelectorAll('.voice-card').forEach(function(c) { c.classList.remove('selected'); });
         card.classList.add('selected');
         selectedVoice = card.dataset.voice;
+        selectedCloneVoice = null;
+    }
+    function selectCloneVoice(card) {
+        document.querySelectorAll('.voice-card').forEach(function(c) { c.classList.remove('selected'); });
+        document.querySelectorAll('.voice-clone-card').forEach(function(c) { c.classList.remove('selected'); });
+        card.classList.add('selected');
+        selectedCloneVoice = card.dataset.voiceId;
+        selectedVoice = null;
     }
     function showError(message) {
         var el = document.getElementById('errorMsg');
@@ -380,8 +589,268 @@
     }
     function logout() { localStorage.removeItem('auth_token'); localStorage.removeItem('user'); window.location.reload(); }
 
+    // ===========================================
+    // Voice Cloning Functions
+    // ===========================================
+    function initCloneUpload() {
+        var uploadArea = document.getElementById('cloneUploadArea');
+        var fileInput = document.getElementById('cloneAudioInput');
+        
+        uploadArea.addEventListener('click', function() { fileInput.click(); });
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', function() {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleCloneFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', function() {
+            if (this.files.length) handleCloneFile(this.files[0]);
+        });
+    }
+    function handleCloneFile(file) {
+        var plan = getUserPlan();
+        if (plan === 'free') {
+            showError('Voice cloning chỉ áp dụng cho gói Plus/Pro. Vui lòng nâng cấp!');
+            return;
+        }
+        var validTypes = ['audio/mpeg', 'audio/wav', 'audio/mp4', 'audio/ogg', 'audio/x-m4a'];
+        if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|wav|m4a|ogg)$/i)) {
+            showError('Định dạng không hỗ trợ. Vui lòng dùng MP3, WAV, M4A, OGG.');
+            return;
+        }
+        cloneAudioFile = file;
+        var info = document.getElementById('cloneFileInfo');
+        if (info) {
+            info.style.display = 'block';
+            info.innerHTML = '<div class="name">' + file.name + '</div><div class="size">' + formatFileSize(file.size) + '</div>';
+        }
+        var durationEl = document.getElementById('cloneDuration');
+        var statusEl = document.getElementById('cloneSampleStatus');
+        var container = document.getElementById('cloneWaveformContainer');
+        if (container) container.style.display = 'block';
+        if (durationEl) durationEl.textContent = 'Đang kiểm tra...';
+        if (statusEl) statusEl.textContent = '';
+        var audio = new Audio();
+        audio.src = URL.createObjectURL(file);
+        audio.addEventListener('loadedmetadata', function() {
+            var seconds = audio.duration;
+            var durationStr = Math.floor(seconds / 60) + ':' + String(Math.floor(seconds % 60)).padStart(2, '0');
+            if (durationEl) durationEl.textContent = durationStr;
+            if (seconds < 3) {
+                if (statusEl) statusEl.textContent = '⚠️ Quá ngắn (cần 3-10 giây)';
+                statusEl.style.color = '#F59E0B';
+                document.getElementById('cloneBtn').disabled = true;
+            } else if (seconds > 10) {
+                if (statusEl) statusEl.textContent = '⚠️ Quá dài (tối đa 10 giây)';
+                statusEl.style.color = '#F59E0B';
+                document.getElementById('cloneBtn').disabled = true;
+            } else {
+                if (statusEl) statusEl.textContent = '✓ Độ dài phù hợp';
+                statusEl.style.color = '#10B981';
+                document.getElementById('cloneBtn').disabled = false;
+            }
+        });
+    }
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+    async function uploadCloneAudio() {
+        if (!cloneAudioFile) { showError('Vui lòng tải file audio mẫu.'); return; }
+        var voiceName = document.getElementById('cloneVoiceName')?.value.trim() || 'Clone ' + (clonedVoices.length + 1);
+        var btn = document.getElementById('cloneBtn');
+        if (btn) { btn.disabled = true; btn.innerHTML = 'Đang tạo...'; }
+        try {
+            var fd = new FormData();
+            fd.append('ref_audio', cloneAudioFile);
+            fd.append('voice_name', voiceName);
+            var token = getAuthToken();
+            var resp = await fetch('http://localhost:8000/api/audio/clone', {
+                method: 'POST',
+                headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+                body: fd
+            });
+            if (!resp.ok) {
+                var ed = await resp.json().catch(function() { return { detail: 'Lỗi' }; });
+                throw new Error(ed.detail || 'HTTP ' + resp.status);
+            }
+            var data = await resp.json();
+            if (data.voice_id) {
+                clonedVoices.push({ id: data.voice_id, name: voiceName, created: new Date().toLocaleDateString('vi-VN') });
+                renderClonedVoices();
+                showSuccess('Đã tạo giọng clone: ' + voiceName);
+            } else {
+                showSuccess(data.message || 'Voice cloning đang được phát triển.');
+            }
+        } catch(e) { showError(e.message || 'Lỗi tạo voice clone'); }
+        finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = 'Tạo giọng clone'; }
+        }
+    }
+    function showSuccess(message) {
+        var el = document.createElement('div');
+        el.className = 'alert alert-success';
+        el.style.cssText = 'position:fixed;top:80px;right:20px;padding:16px 24px;background:#10B981;color:white;border-radius:8px;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,0.15);';
+        el.textContent = message;
+        document.body.appendChild(el);
+        setTimeout(function() { el.style.opacity = '0'; setTimeout(function() { document.body.removeChild(el); }, 300); }, 3000);
+    }
+    async function loadClonedVoices() {
+        var plan = getUserPlan();
+        if (plan === 'free') {
+            document.getElementById('clonedVoicesList').innerHTML = '<div class="plan-required">Voice cloning chỉ áp dụng cho gói Plus/Pro.<br><a href="/pricing">Nâng cấp gói</a> để sử dụng tính năng này.</div>';
+            return;
+        }
+        try {
+            var token = getAuthToken();
+            var resp = await fetch('http://localhost:8000/api/audio/cloned-voices', {
+                headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+            });
+            if (resp.ok) {
+                var data = await resp.json();
+                clonedVoices = data.voices || [];
+            }
+        } catch(e) { console.error('Load cloned voices error:', e); }
+        renderClonedVoices();
+    }
+    function renderClonedVoices() {
+        var container = document.getElementById('clonedVoicesList');
+        if (!clonedVoices || clonedVoices.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-gray);">Chưa có giọng clone nào.<br>Hãy tải mẫu audio để tạo giọng riêng.</div>';
+            return;
+        }
+        var html = '';
+        clonedVoices.forEach(function(v) {
+            var isSelected = selectedCloneVoice === v.id;
+            html += '<div class="voice-clone-card ' + (isSelected ? 'selected' : '') + '" data-voice-id="' + v.id + '" onclick="selectCloneVoice(this)">' +
+                '<div class="voice-clone-info"><div class="name">🎭 ' + v.name + '</div><div class="desc">Tạo: ' + v.created + '</div></div>' +
+                '<div class="voice-clone-actions"><button class="btn-sm delete" onclick="event.stopPropagation(); deleteCloneVoice(\'' + v.id + '\')">🗑</button></div>' +
+                '</div>';
+        });
+        container.innerHTML = html;
+    }
+    async function deleteCloneVoice(voiceId) {
+        if (!confirm('Xóa giọng clone này?')) return;
+        try {
+            var token = getAuthToken();
+            var resp = await fetch('http://localhost:8000/api/audio/cloned-voices/' + voiceId, {
+                method: 'DELETE',
+                headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+            });
+            if (resp.ok) {
+                clonedVoices = clonedVoices.filter(function(v) { return v.id !== voiceId; });
+                if (selectedCloneVoice === voiceId) selectedCloneVoice = null;
+                renderClonedVoices();
+            }
+        } catch(e) { showError('Lỗi xóa giọng clone'); }
+    }
+
+    // ===========================================
+    // Server-side History Functions
+    // ===========================================
+    async function loadHistory(page) {
+        if (!page) page = 1;
+        historyPage = page;
+        var container = document.getElementById('historyList');
+        var filter = document.getElementById('historyFilter')?.value || 'all';
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-gray);">Đang tải...</div>';
+        try {
+            var token = getAuthToken();
+            if (!token) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-gray);">Vui lòng <a href="/login">đăng nhập</a> để xem lịch sử.</div>';
+                return;
+            }
+            var resp = await fetch('http://localhost:8000/api/audio/list?page=' + page + '&per_page=10', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (!resp.ok) { container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-gray);">Không tải được lịch sử.</div>'; return; }
+            var data = await resp.json();
+            historyTotal = data.total || 0;
+            var items = data.items || [];
+            if (items.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-gray);">Chưa có audio nào.</div>';
+                document.getElementById('historyPagination').style.display = 'none';
+                return;
+            }
+            var html = '';
+            items.forEach(function(item) {
+                var voiceName = item.voice_id || 'Unknown';
+                var isClone = item.voice_id && item.voice_id.startsWith('clone_');
+                var icon = isClone ? '🎭' : '🔊';
+                var typeLabel = isClone ? 'Clone' : 'Preset';
+                var textPreview = (item.text_input || '').substring(0, 60) + '...';
+                var date = item.created_at ? new Date(item.created_at).toLocaleString('vi-VN') : '';
+                var duration = item.duration ? item.duration.toFixed(1) + 's' : '-';
+                var audioUrl = '/api/audio/' + item.id + '/download';
+                html += '<div class="history-server-item">' +
+                    '<div class="history-server-info" onclick="playHistoryAudio(\'' + audioUrl + '\', \'' + item.id + '\')">' +
+                    '<div class="hs-icon">' + icon + '</div>' +
+                    '<div class="hs-details"><div class="hs-text">' + textPreview + '</div><div class="hs-meta">' + voiceName + ' • ' + duration + ' • ' + date + '</div></div>' +
+                    '</div>' +
+                    '<div class="history-server-actions">' +
+                    '<button class="btn-sm" onclick="playHistoryAudio(\'' + audioUrl + '\', \'' + item.id + '\')">▶️</button>' +
+                    '<button class="btn-sm" onclick="downloadHistoryAudio(\'' + item.id + '\', \'' + (item.filename || 'audio.wav') + '\')">💾</button>' +
+                    '<button class="btn-sm delete" onclick="deleteHistoryAudio(\'' + item.id + '\')">🗑</button>' +
+                    '</div></div>';
+            });
+            container.innerHTML = html;
+            updateHistoryPagination();
+        } catch(e) {
+            console.error('Load history error:', e);
+            container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-gray);">Lỗi tải lịch sử.</div>';
+        }
+    }
+    function updateHistoryPagination() {
+        var container = document.getElementById('historyPagination');
+        if (!container) return;
+        var totalPages = Math.ceil(historyTotal / 10);
+        if (totalPages <= 1) { container.style.display = 'none'; return; }
+        container.style.display = 'flex';
+        var html = '';
+        for (var i = 1; i <= totalPages; i++) {
+            html += '<button class="pagination-btn ' + (i === historyPage ? 'active' : '') + '" onclick="loadHistory(' + i + ')">' + i + '</button>';
+        }
+        container.innerHTML = html;
+    }
+    var currentHistoryAudioId = null;
+    function playHistoryAudio(url, audioId) {
+        currentHistoryAudioId = audioId;
+        var audio = document.getElementById('audioPlayer');
+        if (audio) { audio.src = url; audio.play(); }
+        var result = document.getElementById('audioResult');
+        if (result) result.classList.add('show');
+    }
+    function downloadHistoryAudio(audioId, filename) {
+        var token = getAuthToken();
+        var a = document.createElement('a');
+        a.href = 'http://localhost:8000/api/audio/' + audioId + '/download';
+        a.download = filename || 'audio.wav';
+        a.headers = { 'Authorization': 'Bearer ' + token };
+        a.click();
+    }
+    async function deleteHistoryAudio(audioId) {
+        if (!confirm('Xóa audio này?')) return;
+        try {
+            var token = getAuthToken();
+            var resp = await fetch('http://localhost:8000/api/audio/' + audioId, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (resp.ok) { loadHistory(historyPage); showSuccess('Đã xóa audio!'); }
+            else { var ed = await resp.json().catch(function() { return {}; }); showError(ed.detail || 'Lỗi xóa'); }
+        } catch(e) { showError('Lỗi xóa audio'); }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         initTabs();
+        initCloneUpload();
         updateCharCount();
         updateUserStatus();
         loadHistory();

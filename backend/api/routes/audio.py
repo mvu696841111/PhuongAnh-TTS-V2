@@ -838,17 +838,119 @@ async def get_download_url(
 )
 async def clone_voice(
     ref_audio,
-    ref_text: str = "",
     voice_name: str = "",
     current_user: dict = Depends(get_current_user),
     subscription_service: SubscriptionService = Depends(get_subscription_service)
 ):
-    """Clone a voice from reference audio."""
-    return {
-        "message": "Voice cloning feature coming soon",
-        "status": "pending",
-        "voice_id": None
-    }
+    """
+    Clone a voice from reference audio.
+    Requires Plus or Pro plan.
+    """
+    from services.cloning_service import VoiceCloningService
+    
+    try:
+        cloning_service = VoiceCloningService(get_database())
+        
+        # Read audio file
+        audio_data = await ref_audio.read()
+        
+        # Create voice clone
+        voice_id, voice_data = await cloning_service.create_clone(
+            user_id=str(current_user["_id"]),
+            audio_data=audio_data,
+            voice_name=voice_name or f"Clone {datetime.now().strftime('%Y%m%d%H%M%S')}"
+        )
+        
+        logger.info(f"Voice clone created: {voice_id} for user {current_user['_id']}")
+        
+        return {
+            "message": "Voice cloned successfully",
+            "status": "completed",
+            "voice_id": voice_id,
+            "name": voice_data["name"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Voice cloning error: {e}")
+        return {
+            "message": f"Voice cloning failed: {str(e)}",
+            "status": "failed",
+            "voice_id": None
+        }
+
+
+@router.get(
+    "/cloned-voices",
+    summary="List cloned voices",
+    description="Get list of user's cloned voices.",
+)
+async def list_cloned_voices(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Get user's cloned voices."""
+    from bson import ObjectId
+    
+    user_id = str(current_user["_id"])
+    
+    try:
+        voices = await db.cloned_voices.find({
+            "user_id": ObjectId(user_id)
+        }).sort("created_at", -1).to_list(length=100)
+        
+        return {
+            "voices": [
+                {
+                    "id": str(v["_id"]),
+                    "name": v.get("name", "Unnamed"),
+                    "created": v.get("created_at", datetime.now()).isoformat()
+                }
+                for v in voices
+            ],
+            "total": len(voices)
+        }
+    except Exception as e:
+        logger.error(f"List cloned voices error: {e}")
+        return {"voices": [], "total": 0}
+
+
+@router.delete(
+    "/cloned-voices/{voice_id}",
+    summary="Delete cloned voice",
+    description="Delete a cloned voice.",
+)
+async def delete_cloned_voice(
+    voice_id: str,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Delete a cloned voice."""
+    from bson import ObjectId
+    
+    user_id = str(current_user["_id"])
+    
+    try:
+        result = await db.cloned_voices.delete_one({
+            "_id": ObjectId(voice_id),
+            "user_id": ObjectId(user_id)
+        })
+        
+        if result.deleted_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Voice not found"
+            )
+        
+        return {"message": "Voice deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Delete cloned voice error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete voice"
+        )
 
 
 # ===========================================

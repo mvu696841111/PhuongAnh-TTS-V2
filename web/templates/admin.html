@@ -7,6 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
         /* Admin Layout */
@@ -481,6 +483,49 @@
             color: var(--text-gray);
         }
 
+        /* Chart containers */
+        .chart-wrapper {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+        .chart-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 250px;
+            color: var(--text-gray);
+        }
+
+        /* Donut chart container */
+        .donut-wrapper {
+            position: relative;
+            height: 200px;
+            width: 200px;
+            margin: 0 auto;
+        }
+        .donut-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .donut-center .value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .donut-center .label {
+            font-size: 12px;
+            color: var(--text-gray);
+        }
+
+        /* Revenue chart */
+        .revenue-chart-wrapper {
+            height: 300px;
+            width: 100%;
+        }
+
         /* Revenue List */
         .revenue-list {
             list-style: none;
@@ -698,30 +743,45 @@
                     <div class="chart-card">
                         <div class="chart-header">
                             <h3>Người dùng mới (30 ngày)</h3>
+                            <select id="userChartRange" onchange="updateUserChart()" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px;">
+                                <option value="7">7 ngày</option>
+                                <option value="14">14 ngày</option>
+                                <option value="30" selected>30 ngày</option>
+                            </select>
                         </div>
-                        <div class="chart-placeholder" id="user-chart">
-                            <span>Đang tải biểu đồ...</span>
+                        <div class="chart-wrapper">
+                            <canvas id="userChart"></canvas>
                         </div>
                     </div>
                     <div class="chart-card">
                         <div class="chart-header">
-                            <h3>Doanh thu theo gói</h3>
+                            <h3>Phân bố người dùng theo gói</h3>
                         </div>
-                        <ul class="revenue-list" id="revenue-list">
-                            <li class="revenue-item">
-                                <div class="revenue-plan">
-                                    <div class="icon free">F</div>
-                                    <div>
-                                        <h4>Free</h4>
-                                        <span>Miễn phí</span>
-                                    </div>
-                                </div>
-                                <div class="revenue-amount">
-                                    <div class="amount">$0</div>
-                                    <div class="count" id="free-count">0 người</div>
-                                </div>
-                            </li>
-                        </ul>
+                        <div class="donut-wrapper">
+                            <canvas id="userDistChart"></canvas>
+                            <div class="donut-center">
+                                <div class="value" id="totalUsersCount">-</div>
+                                <div class="label">Tổng user</div>
+                            </div>
+                        </div>
+                        <div id="planLegend" style="margin-top: 16px; text-align: center;"></div>
+                    </div>
+                </div>
+
+                <!-- Revenue Chart -->
+                <div class="chart-card" style="margin-bottom: 24px;">
+                    <div class="chart-header">
+                        <h3>Doanh thu theo thời gian</h3>
+                        <div style="display: flex; gap: 8px;">
+                            <select id="revenueChartRange" onchange="updateRevenueChart()" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px;">
+                                <option value="7">7 ngày</option>
+                                <option value="30" selected>30 ngày</option>
+                                <option value="90">90 ngày</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="revenue-chart-wrapper">
+                        <canvas id="revenueChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -991,6 +1051,11 @@
         let logsPage = 1;
         const pageSize = 20;
 
+        // Chart instances
+        let userChartInstance = null;
+        let userDistChartInstance = null;
+        let revenueChartInstance = null;
+
         // Tab Navigation
         document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
             item.addEventListener('click', (e) => {
@@ -1082,22 +1147,19 @@
             document.getElementById('stat-active-sessions').textContent = stats.active_sessions || 0;
             document.getElementById('stat-usage-month').textContent = stats.usage_this_month || 0;
 
-            // Load revenue
+            // Load finance stats
             const finance = await api('/finance/stats');
             if (finance) {
                 document.getElementById('finance-total-revenue').textContent = `$${finance.total_revenue.toFixed(2)}`;
                 document.getElementById('finance-active-subs').textContent = finance.active_subscriptions;
                 document.getElementById('finance-free-users').textContent = finance.free_users;
                 document.getElementById('finance-paid-users').textContent = finance.paid_users;
-                
-                updateRevenueList(finance);
             }
 
-            // Load user history
-            const history = await api('/finance/revenue?days=30');
-            if (history) {
-                updateUserChart(history.history);
-            }
+            // Load charts
+            loadUserChartData(30);
+            loadUserDistribution();
+            loadRevenueChart(30);
         }
 
         function updateRevenueList(finance) {
@@ -1135,23 +1197,162 @@
             document.getElementById('revenue-list').innerHTML = html;
         }
 
-        function updateUserChart(history) {
-            const chart = document.getElementById('user-chart');
-            if (!history || history.length === 0) {
-                chart.innerHTML = '<span>Không có dữ liệu</span>';
-                return;
+        function updateUserChart() {
+            const range = document.getElementById('userChartRange')?.value || 30;
+            loadUserChartData(range);
+        }
+
+        async function loadUserChartData(days = 30) {
+            const history = await api('/finance/revenue?days=' + days);
+            if (!history || !history.history) return;
+
+            const ctx = document.getElementById('userChart');
+            if (!ctx) return;
+
+            // Process data for Chart.js
+            const labels = history.history.map(h => h._id);
+            const data = history.history.map(h => h.count);
+
+            if (userChartInstance) {
+                userChartInstance.destroy();
             }
 
-            const maxCount = Math.max(...history.map(h => h.count), 1);
-            const bars = history.map(h => {
-                const height = (h.count / maxCount) * 100;
-                return `<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;">
-                    <div style="width:12px; background:var(--primary); border-radius:4px 4px 0 0; height:${height}%;"></div>
-                    <span style="font-size:10px; color:var(--text-gray); margin-top:4px;">${h._id.slice(5)}</span>
-                </div>`;
-            }).join('');
+            userChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Người dùng mới',
+                        data: data,
+                        borderColor: '#FF6B35',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        }
 
-            chart.innerHTML = `<div style="display:flex; align-items:flex-end; height:200px; gap:4px; width:100%; padding:0 20px;">${bars}</div>`;
+        async function loadUserDistribution() {
+            const stats = await api('/dashboard');
+            if (!stats) return;
+
+            const ctx = document.getElementById('userDistChart');
+            if (!ctx) return;
+
+            const freeUsers = stats.free_users || 0;
+            const plusUsers = stats.plus_users || 0;
+            const proUsers = stats.pro_users || 0;
+            const total = stats.total_users || 1;
+
+            document.getElementById('totalUsersCount').textContent = total;
+
+            if (userDistChartInstance) {
+                userDistChartInstance.destroy();
+            }
+
+            userDistChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Free', 'Plus', 'Pro'],
+                    datasets: [{
+                        data: [freeUsers, plusUsers, proUsers],
+                        backgroundColor: ['#6B7280', '#3B82F6', '#8B5CF6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // Update legend
+            const legendHtml = [
+                '<span style="margin: 0 8px;"><span style="display: inline-block; width: 12px; height: 12px; background: #6B7280; border-radius: 2px;"></span> Free: ' + freeUsers + '</span>',
+                '<span style="margin: 0 8px;"><span style="display: inline-block; width: 12px; height: 12px; background: #3B82F6; border-radius: 2px;"></span> Plus: ' + plusUsers + '</span>',
+                '<span style="margin: 0 8px;"><span style="display: inline-block; width: 12px; height: 12px; background: #8B5CF6; border-radius: 2px;"></span> Pro: ' + proUsers + '</span>'
+            ].join('');
+            document.getElementById('planLegend').innerHTML = legendHtml;
+        }
+
+        async function loadRevenueChart(days = 30) {
+            const data = await api('/finance/revenue?days=' + days);
+            if (!data || !data.history) return;
+
+            const ctx = document.getElementById('revenueChart');
+            if (!ctx) return;
+
+            // Group by date and sum
+            const revenueByDate = {};
+            data.history.forEach(h => {
+                if (!revenueByDate[h._id]) {
+                    revenueByDate[h._id] = { revenue: 0, users: 0 };
+                }
+                revenueByDate[h._id].users += h.paid || 0;
+            });
+
+            // Calculate mock revenue (in real app, this would come from payment records)
+            const labels = Object.keys(revenueByDate);
+            const revenueData = labels.map(date => revenueByDate[date].users * 10); // Mock: $10 per paid user
+
+            if (revenueChartInstance) {
+                revenueChartInstance.destroy();
+            }
+
+            revenueChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Doanh thu ($)',
+                        data: revenueData,
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateRevenueChart() {
+            const range = document.getElementById('revenueChartRange')?.value || 30;
+            loadRevenueChart(range);
         }
 
         // Users
