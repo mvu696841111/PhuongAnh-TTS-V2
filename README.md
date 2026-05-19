@@ -57,7 +57,7 @@ tts.save(audio, "output.wav")
 2. [Python SDK](#sdk)
 3. [Web UI](#web-ui)
 4. [Docker Deployment](#docker)
-5. [Voice Cloning](#cloning)
+5. [Windows 11 Docker Setup](#windows-11-docker)
 6. [API Server](#api-server)
 7. [Fine-tuning](#finetune)
 8. [Support](#support)
@@ -173,6 +173,24 @@ docker run --gpus all -p 23333:23333 ghcr.io/mvu696841111/phuonganh-tts:latest
 ```bash
 docker-compose up -d
 ```
+
+### Windows 11 Setup
+
+For Windows 11 users, we provide a dedicated Docker configuration:
+
+1. Install **Docker Desktop** with WSL 2 backend
+2. Clone the repository:
+   ```powershell
+   git clone https://github.com/mvu696841111/PhuongAnh-TTS-V2.git
+   cd PhuongAnh-TTS-V2
+   ```
+3. Run with Docker Compose:
+   ```powershell
+   docker-compose -f docker-compose.win.yml up -d
+   ```
+4. Open **http://localhost:7860** in your browser
+
+For detailed Windows 11 installation instructions, see [DOCKER_WINDOWS.md](DOCKER_WINDOWS.md).
 
 ---
 

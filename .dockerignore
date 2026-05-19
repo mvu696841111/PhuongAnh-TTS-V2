@@ -1,0 +1,86 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+.xpu_venv/
+uvvenv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Environment files
+.env
+.env.local
+*.log
+
+# Models - download at runtime
+models/
+merged_models_cache/
+
+# Data & Outputs
+outputs/
+*.wav
+*.mp3
+data/audios/
+data/temp/
+data/mongodb/
+data/redis/
+
+# Finetune
+finetune/dataset/
+finetune/output/
+
+# Documentation (optional - can be kept)
+*.md
+!README.md
+LICENSE
+docs/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.docker/
+
+# CI/CD
+.github/
+.github/workflows/
+
+# Tests
+tests/
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db

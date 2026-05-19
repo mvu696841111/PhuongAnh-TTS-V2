@@ -1,0 +1,57 @@
+# ============================================
+# PhuongAnh-TTS Dockerfile for Windows 11
+# ============================================
+# Windows 11 uses WSL2 backend for Docker
+# Build: docker build -t phuonganh-tts -f docker/Dockerfile.win .
+# Run:   docker run -p 7860:7860 phuonganh-tts
+# ============================================
+
+FROM python:3.12-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    HF_HOME=/root/.cache/huggingface \
+    PHONEMIZER_ESPEAK_LIBRARY=/usr/lib/x86_64-linux-gnu/libespeak-ng.so.1 \
+    # Use CPU mode by default (no GPU in Windows)
+    PHUONGANH_TTS_MODE=cpu
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    espeak-ng \
+    libespeak-ng1 \
+    git \
+    curl \
+    wget \
+    build-essential \
+    libsndfile1 \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for fast package management
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /workspace
+
+# Copy dependency files first for better caching
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies (CPU mode - no GPU)
+RUN uv sync --no-dev
+
+# Copy application code
+COPY . .
+
+# Create directories for models and outputs
+RUN mkdir -p models outputs data/temp
+
+# Expose Gradio port
+EXPOSE 7860
+
+# Environment for Gradio
+ENV GRADIO_SERVER_NAME=0.0.0.0 \
+    GRADIO_SERVER_PORT=7860 \
+    GRADIO_SHARE=0
+
+# Default command - start web UI
+CMD ["uv", "run", "phuonganh-tts-web"]

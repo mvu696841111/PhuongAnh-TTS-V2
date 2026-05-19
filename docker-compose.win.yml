@@ -1,0 +1,112 @@
+# ============================================
+# Docker Compose for PhuongAnh-TTS on Windows 11
+# ============================================
+# Windows 11 uses WSL2 backend for Docker
+#
+# Usage:
+#   1. Make sure Docker Desktop is running with WSL2 backend
+#   2. Run: docker-compose -f docker-compose.win.yml up -d
+#   3. Open: http://localhost:7860
+# ============================================
+
+services:
+  # =========================================
+  # PhuongAnh-TTS Web UI
+  # =========================================
+  phuonganh-tts:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.win
+    container_name: phuonganh-tts-win
+    restart: unless-stopped
+    ports:
+      - "7860:7860"
+    environment:
+      - HF_HUB_OFFLINE=0
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_SERVER_PORT=7860
+      - GRADIO_SHARE=0
+      # CPU mode (no GPU on Windows by default)
+      - PHUONGANH_TTS_MODE=cpu
+    volumes:
+      # Mount to persist models and outputs
+      - phuonganh_models:/workspace/models
+      - phuonganh_outputs:/workspace/outputs
+      # Optional: mount audio samples
+      # - ./data/audios:/workspace/data/audios
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - phuonganh-network
+    mem_limit: 8g
+    cpu_count: 4
+
+  # =========================================
+  # MongoDB (Optional - for API features)
+  # =========================================
+  mongodb:
+    image: mongo:7.0
+    container_name: phuonganh-mongodb-win
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-phuonganh_password}
+      MONGO_INITDB_DATABASE: phuonganh_tts
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - phuonganh-network
+    mem_limit: 2g
+
+  # =========================================
+  # Redis (Optional - for caching)
+  # =========================================
+  redis:
+    image: redis:7-alpine
+    container_name: phuonganh-redis-win
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - phuonganh-network
+    mem_limit: 256m
+
+# =========================================
+# Volumes (persist data between runs)
+# =========================================
+volumes:
+  phuonganh_models:
+    driver: local
+  phuonganh_outputs:
+    driver: local
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# =========================================
+# Networks
+# =========================================
+networks:
+  phuonganh-network:
+    driver: bridge
